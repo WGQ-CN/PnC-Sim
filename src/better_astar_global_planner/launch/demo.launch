@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node pkg="racecar_control" type="gazebo_odometry.py" name="gazebo_odometry_node" output="screen"/>
+
+  <!-- Launch the built-map -->
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find racecar_nav)/map/map.yaml" />
+
+  <param name="/use_sim_time" value="true"/>
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam file="$(find racecar_nav)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find racecar_nav)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find racecar_nav)/config/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find racecar_nav)/config/global_costmap_params.yaml" command="load" />
+
+    <param name="base_global_planner" value="BAstar_planner/BAstarPlannerROS" />
+
+    <remap from="/cmd_vel" to="/cmd_vel_movebase"/>
+  </node>
+
+  <include file="$(find racecar_nav)/launch/amcl.launch"/>
+  <include file="$(find racecar_nav)/launch/racecar_rviz.launch"/>
+</launch>
+
