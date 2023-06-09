@@ -17,7 +17,6 @@ namespace jps_global_planner {
         initialize(name, costmap_ros);
     }
 
-
     void JPSGlobalPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros) {
         initialize(name, costmap_ros->getCostmap(), costmap_ros->getGlobalFrameID());
     }
@@ -27,6 +26,12 @@ namespace jps_global_planner {
             ros::NodeHandle private_nh("~/" + name);
             costmap_ = costmap;
             frame_id_ = frame_id;
+
+            nx_ = costmap_->getSizeInCellsX();
+            ny_ = costmap_->getSizeInCellsY();
+            ns_ = nx_ * ny_;
+
+            costs_ = costmap_->getCharMap();
 
             plan_pub_ = private_nh.advertise<nav_msgs::Path>("plan", 1);
 
@@ -44,6 +49,9 @@ namespace jps_global_planner {
         }
 
         plan.clear();
+        open_set_.clear();
+        close_set_.clear();
+        edges_.clear();
 
         ros::NodeHandle nh;
         std::string global_frame = frame_id_;
@@ -88,9 +96,59 @@ namespace jps_global_planner {
         //clear the starting cell within the costmap because we know it can't be an obstacle
         clearRobotCell(start, start_x_i, start_y_i);
 
-        plan.push_back(start);
+        int start_i = toIndex(start_x, start_y);
+        int goal_i = toIndex(goal_x, goal_y);
+
+        GridNodePtr start_ptr = new GridNode(start_i, start_x, start_y);
+        open_set_.insert(make_pair(0, start_ptr));
+        start_ptr->id_ = 1;
+
+        int c = 0;
+        int cs = ns_ * 2;
+
+        ROS_INFO("Start Planning... goal_i is %d", goal_i);
+
+        while (!open_set_.empty() && c < cs) {
+            GridNodePtr top = open_set_.begin()->second;
+            open_set_.erase(open_set_.begin());
+            close_set_.insert(top->index_);
+
+            if (top->index_ == goal_i) {
+                backtrack(plan, start_i, goal_i);
+                ROS_INFO("Over Planning!");
+                break;
+            }
+
+            for (int i = -1; i <= 1; ++i) {
+                for (int j = -1; j <= 1; ++j) {
+                    if (i == 0 && j == 0)
+                        continue;
+                    int neig_x = top->x_ + i;
+                    int neig_y = top->y_ + j;
+                    int neig_i = toIndex(neig_x, neig_y);
+
+                    if (neig_i < 0 || neig_i >= ns_)
+                        continue;
+                    if(costs_[neig_i] >= 50 && costs_[neig_i] != costmap_2d::NO_INFORMATION)
+                        continue;
+
+                    if (close_set_.find(neig_i) != close_set_.end())
+                        continue;
+                    if (edges_.find(neig_i) != edges_.end())
+                        continue;
+
+                    ROS_INFO("neig_i: %d", neig_i);
+                    
+                    GridNodePtr neig_ptr = new GridNode(neig_i, neig_x, neig_y);
+                    edges_.insert(make_pair(neig_i, top->index_));
+                    open_set_.insert(make_pair(calculateHeuristic(start_x, start_y, neig_x, neig_y, goal_x, goal_y), neig_ptr));
+                }
+            }
+        }
         
+        plan.push_back(start);
         plan.push_back(goal);
+
         publishPlan(plan);
         return true;
     }
@@ -136,6 +194,50 @@ namespace jps_global_planner {
     double JPSGlobalPlanner::euclideanDistance(double x1, double y1, double x2, double y2) {
         double res = sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
         return res;
+    }
+
+    double JPSGlobalPlanner::calculateHeuristic(double start_x, double start_y, double x, double y, double goal_x, double goal_y) {
+        double p = 0.5;
+        double f_cost = manhattanDistance(start_x, start_y, x, y);
+        double g_cost = euclideanDistance(x, y, goal_x, goal_y);
+        double h_cost = (1.0 - p) * f_cost + p * g_cost;
+        return h_cost;
+    }
+
+    bool JPSGlobalPlanner::backtrack(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i) {
+        int curr_i = goal_i;
+
+        geometry_msgs::PoseStamped tmp_pose;
+
+        while (curr_i != start_i) {
+            ROS_INFO("backtrack: curr_i is %d", curr_i);
+            tmp_pose.header.frame_id = frame_id_;
+            tmp_pose.pose.position.x = curr_i % nx_;
+            tmp_pose.pose.position.y = curr_i / nx_;
+
+            tmp_pose.pose.position.z = 0.0;
+            tmp_pose.pose.orientation.w = 1.0;
+            tmp_pose.pose.orientation.x = 0.0;
+            tmp_pose.pose.orientation.y = 0.0;
+            tmp_pose.pose.orientation.z = 0.0;
+
+            plan.push_back(tmp_pose);
+            curr_i = edges_[curr_i];
+        }
+
+        tmp_pose.header.frame_id = frame_id_;
+        tmp_pose.pose.position.x = start_i % nx_;
+        tmp_pose.pose.position.y = start_i / nx_;
+
+        tmp_pose.pose.position.z = 0.0;
+        tmp_pose.pose.orientation.w = 1.0;
+        tmp_pose.pose.orientation.x = 0.0;
+        tmp_pose.pose.orientation.y = 0.0;
+        tmp_pose.pose.orientation.z = 0.0;
+
+        plan.push_back(tmp_pose);
+        std::reverse(plan.begin(), plan.end());
+        return true;
     }
 
 };

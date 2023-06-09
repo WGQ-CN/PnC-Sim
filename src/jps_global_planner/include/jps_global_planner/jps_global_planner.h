@@ -14,10 +14,38 @@
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/Path.h>
+#include <unordered_map>
 
 using std::string;
 
 namespace jps_global_planner {
+
+#define inf 1>>20
+struct GridNode;
+typedef GridNode* GridNodePtr;
+
+struct GridNode
+{
+    int id_;
+    int x_, y_;
+    int index_;
+
+    double g_cost_;
+    GridNodePtr came_from_;
+
+    GridNode(int index, int x, int y) {
+        id_ = 0;
+        index_ = index;
+        x_ = x;
+        y_ = y;
+
+        g_cost_ = inf;
+        came_from_ = NULL;
+    }
+
+    GridNode(){};
+    ~GridNode(){};
+};
 
 class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
     public:
@@ -37,16 +65,27 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         void clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my);
         double manhattanDistance(double x1, double y1, double x2, double y2);
         double euclideanDistance(double x1, double y1, double x2, double y2);
+        double calculateHeuristic(double start_x, double start_y, double x, double y, double goal_x, double goal_y);
+        void add(int start_x, int start_y, int curr_i, int next_i, int end_x, int end_y);
+        bool backtrack(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i);
 
     protected:
         costmap_2d::Costmap2D* costmap_;
         std::string frame_id_;
         ros::Publisher plan_pub_;
         bool initialized_;
-    
+
     private:
-        void mapToWorld(double mx, double my, double& wx, double& wy);
-        bool worldToMap(double wx, double wy, double& mx, double& my);
+        int nx_, ny_, ns_;
+        inline int toIndex(int x, int y) {
+            return x + nx_ * y;
+        }
+
+        unsigned char* costs_;
+
+        std::multimap<double, GridNodePtr> open_set_;
+        std::set<int> close_set_;
+        std::unordered_map<int, int> edges_;
 
     };
 };
