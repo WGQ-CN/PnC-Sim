@@ -145,9 +145,6 @@ namespace jps_global_planner {
                 }
             }
         }
-        
-        plan.push_back(start);
-        plan.push_back(goal);
 
         publishPlan(plan);
         return true;
@@ -212,8 +209,8 @@ namespace jps_global_planner {
         while (curr_i != start_i) {
             ROS_INFO("backtrack: curr_i is %d", curr_i);
             tmp_pose.header.frame_id = frame_id_;
-            tmp_pose.pose.position.x = curr_i % nx_;
-            tmp_pose.pose.position.y = curr_i / nx_;
+            tmp_pose.pose.position.x = (curr_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
+            tmp_pose.pose.position.y = (curr_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();
 
             tmp_pose.pose.position.z = 0.0;
             tmp_pose.pose.orientation.w = 1.0;
@@ -226,8 +223,8 @@ namespace jps_global_planner {
         }
 
         tmp_pose.header.frame_id = frame_id_;
-        tmp_pose.pose.position.x = start_i % nx_;
-        tmp_pose.pose.position.y = start_i / nx_;
+        tmp_pose.pose.position.x = (start_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
+        tmp_pose.pose.position.y = (start_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();
 
         tmp_pose.pose.position.z = 0.0;
         tmp_pose.pose.orientation.w = 1.0;
