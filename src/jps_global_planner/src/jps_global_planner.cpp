@@ -100,6 +100,7 @@ namespace jps_global_planner {
         int goal_i = toIndex(goal_x, goal_y);
 
         GridNodePtr start_ptr = new GridNode(start_i, start_x, start_y);
+        start_ptr->g_cost_ = 0;
         open_set_.insert(make_pair(0, start_ptr));
         start_ptr->id_ = 1;
 
@@ -129,7 +130,7 @@ namespace jps_global_planner {
 
                     if (neig_i < 0 || neig_i >= ns_)
                         continue;
-                    if(costs_[neig_i] >= 50 && costs_[neig_i] != costmap_2d::NO_INFORMATION)
+                    if(costs_[neig_i] >= 10 && costs_[neig_i] != costmap_2d::NO_INFORMATION)
                         continue;
 
                     if (close_set_.find(neig_i) != close_set_.end())
@@ -137,11 +138,25 @@ namespace jps_global_planner {
                     if (edges_.find(neig_i) != edges_.end())
                         continue;
 
-                    ROS_INFO("neig_i: %d", neig_i);
-                    
+                    // ROS_INFO("neig_i: %d", neig_i);
+
                     GridNodePtr neig_ptr = new GridNode(neig_i, neig_x, neig_y);
-                    edges_.insert(make_pair(neig_i, top->index_));
-                    open_set_.insert(make_pair(calculateHeuristic(start_x, start_y, neig_x, neig_y, goal_x, goal_y), neig_ptr));
+                    neig_ptr->g_cost_ = top->g_cost_ + manhattanDistance(neig_x, neig_y, top->x_, top->y_);
+
+                    double h_cost = calculateHeuristics(neig_x, neig_y, goal_x, goal_y);
+                    double f_cost = neig_ptr->g_cost_ + h_cost;
+                    
+                    auto it = std::find_if(open_set_.begin(), open_set_.end(), [neig_i](const std::pair<double, GridNodePtr> &e){return e.second->index_ == neig_i;});
+                    if (it != open_set_.end()) {
+                        if (f_cost < it->first) {
+                            open_set_.erase(it);
+                            open_set_.insert(make_pair(f_cost, neig_ptr));
+                            edges_[neig_i] = top->index_;
+                        }
+                    } else {
+                        open_set_.insert(make_pair(f_cost, neig_ptr));
+                        edges_.insert(make_pair(neig_i, top->index_));
+                    }
                 }
             }
         }
@@ -193,12 +208,8 @@ namespace jps_global_planner {
         return res;
     }
 
-    double JPSGlobalPlanner::calculateHeuristic(double start_x, double start_y, double x, double y, double goal_x, double goal_y) {
-        double p = 0.5;
-        double f_cost = manhattanDistance(start_x, start_y, x, y);
-        double g_cost = euclideanDistance(x, y, goal_x, goal_y);
-        double h_cost = (1.0 - p) * f_cost + p * g_cost;
-        return h_cost;
+    double JPSGlobalPlanner::calculateHeuristics(double x, double y, double goal_x, double goal_y) {
+        return euclideanDistance(x, y, goal_x, goal_y);;
     }
 
     bool JPSGlobalPlanner::backtrack(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i) {
@@ -207,7 +218,7 @@ namespace jps_global_planner {
         geometry_msgs::PoseStamped tmp_pose;
 
         while (curr_i != start_i) {
-            ROS_INFO("backtrack: curr_i is %d", curr_i);
+            // ROS_INFO("backtrack: curr_i is %d", curr_i);
             tmp_pose.header.frame_id = frame_id_;
             tmp_pose.pose.position.x = (curr_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
             tmp_pose.pose.position.y = (curr_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();

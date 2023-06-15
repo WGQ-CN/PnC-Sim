@@ -65,7 +65,7 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         void clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my);
         double manhattanDistance(double x1, double y1, double x2, double y2);
         double euclideanDistance(double x1, double y1, double x2, double y2);
-        double calculateHeuristic(double start_x, double start_y, double x, double y, double goal_x, double goal_y);
+        double calculateHeuristics(double x, double y, double goal_x, double goal_y);
         void add(int start_x, int start_y, int curr_i, int next_i, int end_x, int end_y);
         bool backtrack(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i);
 
