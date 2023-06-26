@@ -99,7 +99,7 @@ namespace jps_global_planner {
         int start_i = toIndex(start_x, start_y);
         int goal_i = toIndex(goal_x, goal_y);
 
-        GridNodePtr start_ptr = new GridNode(start_i, start_x, start_y);
+        GridNodePtr start_ptr(new GridNode(start_i, start_x, start_y));
         start_ptr->g_cost_ = 0;
         open_set_.insert(make_pair(0, start_ptr));
         start_ptr->id_ = 1;
@@ -119,7 +119,7 @@ namespace jps_global_planner {
                 ROS_INFO("Over Planning!");
                 break;
             }
-
+            
             std::vector<std::pair<int, int>> directions;
             getDirections(directions, top, start_i);
             int directions_count = directions.size();
@@ -174,7 +174,7 @@ namespace jps_global_planner {
 
             //         // ROS_INFO("neig_i: %d", neig_i);
 
-            //         GridNodePtr neig_ptr = new GridNode(neig_i, neig_x, neig_y);
+            //         GridNodePtr neig_ptr(new GridNode(neig_i, neig_x, neig_y));
             //         neig_ptr->g_cost_ = top->g_cost_ + manhattanDistance(neig_x, neig_y, top->x_, top->y_);
 
             //         double h_cost = calculateHeuristics(neig_x, neig_y, goal_x, goal_y);
@@ -184,10 +184,12 @@ namespace jps_global_planner {
             //         if (it != open_set_.end()) {
             //             if (f_cost < it->first) {
             //                 open_set_.erase(it);
+            //                 neig_ptr->came_from_ = top;
             //                 open_set_.insert(make_pair(f_cost, neig_ptr));
             //                 edges_[neig_i] = top->index_;
             //             }
             //         } else {
+            //             neig_ptr->came_from_ = top;
             //             open_set_.insert(make_pair(f_cost, neig_ptr));
             //             edges_.insert(make_pair(neig_i, top->index_));
             //         }
@@ -440,38 +442,69 @@ namespace jps_global_planner {
     }
 
     GridNodePtr JPSGlobalPlanner::jump(GridNodePtr curr_ptr, const std::pair<int, int>& direction, int goal_i) {
+        // int next_i = toIndex(curr_ptr->x_ + direction.first, curr_ptr->y_ + direction.second);
+        // GridNodePtr next_ptr(new GridNode(next_i, curr_ptr->x_ + direction.first, curr_ptr->y_ + direction.second));
+        
+        // if (!isCellFree(next_i)) {
+        //     return nullptr;
+        // }
+
+        // if (next_ptr->x_ == goal_i % nx_ && next_ptr->y_ == goal_i / nx_) {
+        //     return next_ptr;
+        // }
+
+        // if (direction.first * direction.second != 0) {
+        //     if (hasForcedNeighbours(next_ptr, direction)) {
+        //         return next_ptr;
+        //     }
+        //     if (jump(next_ptr, make_pair(direction.first, 0), goal_i) != nullptr) {
+        //         return next_ptr;
+        //     }
+        //     if (jump(next_ptr, make_pair(0, direction.second), goal_i) != nullptr) {
+        //         return next_ptr;
+        //     }
+        // } else if (direction.second == 0) {
+        //     if (hasForcedNeighbours(next_ptr, direction)) {
+        //         return next_ptr;
+        //     }
+        // } else if (direction.first == 0) {
+        //     if (hasForcedNeighbours(next_ptr, direction)) {
+        //         return next_ptr;
+        //     }
+        // }
+
+        // return jump(next_ptr, direction, goal_i);
+
         int next_i = toIndex(curr_ptr->x_ + direction.first, curr_ptr->y_ + direction.second);
-        GridNodePtr next_ptr = new GridNode(next_i, curr_ptr->x_ + direction.first, curr_ptr->y_ + direction.second);
-        
-        if (!isCellFree(next_i)) {
-            return nullptr;
-        }
-        
-        if (next_ptr->x_ == goal_i % nx_ && next_ptr->y_ == goal_i / nx_) {
-            return next_ptr;
+        GridNodePtr next_ptr(new GridNode(next_i, curr_ptr->x_ + direction.first, curr_ptr->y_ + direction.second));
+        while (isCellFree(next_i)) {
+            if (next_ptr->x_ == goal_i % nx_ && next_ptr->y_ == goal_i / nx_) {
+                return next_ptr;
+            }
+
+            if (direction.first * direction.second != 0) {
+                if (hasForcedNeighbours(next_ptr, direction)) {
+                    return next_ptr;
+                }
+                if (jump(next_ptr, make_pair(direction.first, 0), goal_i) != nullptr) {
+                    return next_ptr;
+                }
+                if (jump(next_ptr, make_pair(0, direction.second), goal_i) != nullptr) {
+                    return next_ptr;
+                }
+            } else {
+                if (hasForcedNeighbours(next_ptr, direction)) {
+                    return next_ptr;
+                }
+            }
+            
+            next_i = toIndex(next_ptr->x_ + direction.first, next_ptr->y_ + direction.second);
+            next_ptr->index_ = next_i;
+            next_ptr->x_ = next_ptr->x_ + direction.first;
+            next_ptr->y_ = next_ptr->y_ + direction.second;
         }
 
-        if (direction.first * direction.second != 0) {
-            if (hasForcedNeighbours(next_ptr, direction)) {
-                return next_ptr;
-            }
-            if (jump(next_ptr, make_pair(direction.first, 0), goal_i) != nullptr) {
-                return next_ptr;
-            }
-            if (jump(next_ptr, make_pair(0, direction.second), goal_i) != nullptr) {
-                return next_ptr;
-            }
-        } else if (direction.second == 0) {
-            if (hasForcedNeighbours(next_ptr, direction)) {
-                return next_ptr;
-            }
-        } else if (direction.first == 0) {
-            if (hasForcedNeighbours(next_ptr, direction)) {
-                return next_ptr;
-            }
-        }
-        
-        return jump(next_ptr, direction, goal_i);
+        return nullptr;
     }
 
 };

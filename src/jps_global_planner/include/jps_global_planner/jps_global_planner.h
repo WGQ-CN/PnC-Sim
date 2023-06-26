@@ -15,6 +15,7 @@
 #include <tf/transform_listener.h>
 #include <nav_msgs/Path.h>
 #include <unordered_map>
+#include <memory>
 
 using std::string;
 
@@ -22,7 +23,7 @@ namespace jps_global_planner {
 
 #define inf 1>>20
 struct GridNode;
-typedef GridNode* GridNodePtr;
+typedef std::shared_ptr<GridNode> GridNodePtr;
 
 struct GridNode
 {
@@ -40,7 +41,7 @@ struct GridNode
         y_ = y;
 
         g_cost_ = inf;
-        came_from_ = NULL;
+        came_from_ = nullptr;
     }
 
     GridNode(){};
