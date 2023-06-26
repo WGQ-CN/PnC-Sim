@@ -120,43 +120,79 @@ namespace jps_global_planner {
                 break;
             }
 
-            for (int i = -1; i <= 1; ++i) {
-                for (int j = -1; j <= 1; ++j) {
-                    if (i == 0 && j == 0)
-                        continue;
-                    int neig_x = top->x_ + i;
-                    int neig_y = top->y_ + j;
-                    int neig_i = toIndex(neig_x, neig_y);
+            std::vector<std::pair<int, int>> directions;
+            getDirections(directions, top, start_i);
+            int directions_count = directions.size();
+            for (int i = 0; i < directions_count; ++i) {
+                GridNodePtr neig_ptr = jump(top, directions[i], goal_i);
+                if (neig_ptr == nullptr) {
+                    continue;
+                }
 
-                    if(!isCellFree(neig_i))
-                        continue;
+                int neig_i = neig_ptr->index_;
+                int neig_x = neig_ptr->x_;
+                int neig_y = neig_ptr->y_;
+                
+                if (close_set_.find(neig_i) != close_set_.end())
+                    continue;
+                
+                neig_ptr->g_cost_ = top->g_cost_ + manhattanDistance(neig_x, neig_y, top->x_, top->y_);
 
-                    if (close_set_.find(neig_i) != close_set_.end())
-                        continue;
-                    if (edges_.find(neig_i) != edges_.end())
-                        continue;
+                double h_cost = calculateHeuristics(neig_x, neig_y, goal_x, goal_y);
+                double f_cost = neig_ptr->g_cost_ + h_cost;
 
-                    // ROS_INFO("neig_i: %d", neig_i);
-
-                    GridNodePtr neig_ptr = new GridNode(neig_i, neig_x, neig_y);
-                    neig_ptr->g_cost_ = top->g_cost_ + manhattanDistance(neig_x, neig_y, top->x_, top->y_);
-
-                    double h_cost = calculateHeuristics(neig_x, neig_y, goal_x, goal_y);
-                    double f_cost = neig_ptr->g_cost_ + h_cost;
-                    
-                    auto it = std::find_if(open_set_.begin(), open_set_.end(), [neig_i](const std::pair<double, GridNodePtr> &e){return e.second->index_ == neig_i;});
-                    if (it != open_set_.end()) {
-                        if (f_cost < it->first) {
-                            open_set_.erase(it);
-                            open_set_.insert(make_pair(f_cost, neig_ptr));
-                            edges_[neig_i] = top->index_;
-                        }
-                    } else {
+                auto it = std::find_if(open_set_.begin(), open_set_.end(), [neig_i](const std::pair<double, GridNodePtr> &e){return e.second->index_ == neig_i;});
+                if (it != open_set_.end()) {
+                    if (f_cost < it->first) {
+                        open_set_.erase(it);
+                        neig_ptr->came_from_ = top;
                         open_set_.insert(make_pair(f_cost, neig_ptr));
-                        edges_.insert(make_pair(neig_i, top->index_));
+                        edges_[neig_i] = top->index_;
                     }
+                } else {
+                    neig_ptr->came_from_ = top;
+                    open_set_.insert(make_pair(f_cost, neig_ptr));
+                    edges_.insert(make_pair(neig_i, top->index_));
                 }
             }
+
+            // for (int i = -1; i <= 1; ++i) {
+            //     for (int j = -1; j <= 1; ++j) {
+            //         if (i == 0 && j == 0)
+            //             continue;
+            //         int neig_x = top->x_ + i;
+            //         int neig_y = top->y_ + j;
+            //         int neig_i = toIndex(neig_x, neig_y);
+
+            //         if(!isCellFree(neig_i))
+            //             continue;
+
+            //         if (close_set_.find(neig_i) != close_set_.end())
+            //             continue;
+            //         // if (edges_.find(neig_i) != edges_.end())
+            //         //     continue;
+
+            //         // ROS_INFO("neig_i: %d", neig_i);
+
+            //         GridNodePtr neig_ptr = new GridNode(neig_i, neig_x, neig_y);
+            //         neig_ptr->g_cost_ = top->g_cost_ + manhattanDistance(neig_x, neig_y, top->x_, top->y_);
+
+            //         double h_cost = calculateHeuristics(neig_x, neig_y, goal_x, goal_y);
+            //         double f_cost = neig_ptr->g_cost_ + h_cost;
+                    
+            //         auto it = std::find_if(open_set_.begin(), open_set_.end(), [neig_i](const std::pair<double, GridNodePtr> &e){return e.second->index_ == neig_i;});
+            //         if (it != open_set_.end()) {
+            //             if (f_cost < it->first) {
+            //                 open_set_.erase(it);
+            //                 open_set_.insert(make_pair(f_cost, neig_ptr));
+            //                 edges_[neig_i] = top->index_;
+            //             }
+            //         } else {
+            //             open_set_.insert(make_pair(f_cost, neig_ptr));
+            //             edges_.insert(make_pair(neig_i, top->index_));
+            //         }
+            //     }
+            // }
         }
 
         publishPlan(plan);
