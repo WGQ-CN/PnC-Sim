@@ -66,8 +66,14 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         double manhattanDistance(double x1, double y1, double x2, double y2);
         double euclideanDistance(double x1, double y1, double x2, double y2);
         double calculateHeuristics(double x, double y, double goal_x, double goal_y);
-        void add(int start_x, int start_y, int curr_i, int next_i, int end_x, int end_y);
+        bool isCellFree(int index);
+        bool isCellFree(int x, int y);
         bool backtrack(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i);
+        void mapToWorld(double mx, double my, double& wx, double& wy);
+
+        void getDirections(std::vector<std::pair<int, int>>& directions, GridNodePtr curr_ptr, int start_i);
+        bool hasForcedNeighbours(GridNodePtr curr_ptr, const std::pair<int, int>& direction);
+        GridNodePtr jump(GridNodePtr curr_ptr, const std::pair<int, int>& direction, int goal_i);
 
     protected:
         costmap_2d::Costmap2D* costmap_;
