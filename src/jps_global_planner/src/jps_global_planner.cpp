@@ -115,7 +115,7 @@ namespace jps_global_planner {
             close_set_.insert(top->index_);
 
             if (top->index_ == goal_i) {
-                backtrack(plan, start_i, goal_i);
+                findPath(plan, start_i, goal_i);
                 ROS_INFO("Over Planning!");
                 break;
             }
@@ -263,7 +263,7 @@ namespace jps_global_planner {
         return isCellFree(tmp_i);
     }
 
-    bool JPSGlobalPlanner::backtrack(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i) {
+    bool JPSGlobalPlanner::findPath(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i) {
         int curr_i = goal_i;
 
         geometry_msgs::PoseStamped tmp_pose;

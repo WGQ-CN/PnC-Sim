@@ -1,5 +1,5 @@
-#ifndef _JPS_GLOBAL_PLANNER_H
-#define _JPS_GLOBAL_PLANNER_H
+#ifndef _RRT_GLOBAL_PLANNER_H
+#define _RRT_GLOBAL_PLANNER_H
 /** include the libraries you need in your planner here */
 /** for global path planner interface */
 #include <ros/ros.h>
@@ -14,45 +14,16 @@
 #include <tf/transform_datatypes.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/Path.h>
-#include <unordered_map>
-#include <memory>
 
 using std::string;
 
-namespace jps_global_planner {
+namespace rrt_global_planner {
 
-#define inf 1>>20
-struct GridNode;
-typedef std::shared_ptr<GridNode> GridNodePtr;
-
-struct GridNode
-{
-    int id_;
-    int x_, y_;
-    int index_;
-
-    double g_cost_;
-    GridNodePtr came_from_;
-
-    GridNode(int index, int x, int y) {
-        id_ = 0;
-        index_ = index;
-        x_ = x;
-        y_ = y;
-
-        g_cost_ = inf;
-        came_from_ = nullptr;
-    }
-
-    GridNode(){};
-    ~GridNode(){};
-};
-
-class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
+class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
     public:
 
-        JPSGlobalPlanner();
-        JPSGlobalPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
+        RRTGlobalPlanner();
+        RRTGlobalPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
 
         /** overridden classes from interface nav_core::BaseGlobalPlanner **/
         void initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
@@ -69,12 +40,7 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         double calculateHeuristics(double x, double y, double goal_x, double goal_y);
         bool isCellFree(int index);
         bool isCellFree(int x, int y);
-        bool findPath(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i);
         void mapToWorld(double mx, double my, double& wx, double& wy);
-
-        void getDirections(std::vector<std::pair<int, int>>& directions, GridNodePtr curr_ptr, int start_i);
-        bool hasForcedNeighbours(GridNodePtr curr_ptr, const std::pair<int, int>& direction);
-        GridNodePtr jump(GridNodePtr curr_ptr, const std::pair<int, int>& direction, int goal_i);
 
     protected:
         costmap_2d::Costmap2D* costmap_;
@@ -89,10 +55,6 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         }
 
         unsigned char* costs_;
-
-        std::multimap<double, GridNodePtr> open_set_;
-        std::set<int> close_set_;
-        std::unordered_map<int, int> edges_;
 
     };
 };
