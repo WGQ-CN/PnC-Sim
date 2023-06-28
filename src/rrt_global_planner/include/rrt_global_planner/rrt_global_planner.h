@@ -15,9 +15,42 @@
 #include <tf/transform_listener.h>
 #include <nav_msgs/Path.h>
 
+#include <cmath>
+#include <random>
+
 using std::string;
 
 namespace rrt_global_planner {
+
+#define inf 1>>20
+#define N 999
+struct Node;
+typedef std::shared_ptr<Node> NodePtr;
+
+struct Node
+{
+    int x_, y_;
+    int index_;
+
+    NodePtr came_from_;
+
+    std::vector<int> path_x_;
+    std::vector<int> path_y_;
+
+    Node(int index, int x, int y) {
+        index_ = index;
+        x_ = x;
+        y_ = y;
+
+        came_from_ = nullptr;
+
+        path_x_.clear();
+        path_y_.clear();
+    }
+
+    Node(){};
+    ~Node(){};
+};
 
 class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
     public:
@@ -35,12 +68,20 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         void initialize(std::string name, costmap_2d::Costmap2D* costmap, std::string frame_id);
         void publishPlan(const std::vector<geometry_msgs::PoseStamped>& path);
         void clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my);
+        void mapToWorld(double mx, double my, double& wx, double& wy);
         double manhattanDistance(double x1, double y1, double x2, double y2);
         double euclideanDistance(double x1, double y1, double x2, double y2);
-        double calculateHeuristics(double x, double y, double goal_x, double goal_y);
         bool isCellFree(int index);
         bool isCellFree(int x, int y);
-        void mapToWorld(double mx, double my, double& wx, double& wy);
+
+        NodePtr steer(const NodePtr& from_node, const NodePtr& to_node);
+        void generateFinalCourse(std::vector<geometry_msgs::PoseStamped>& plan, const std::vector<NodePtr>& node_list);
+        double calcDist2Goal(int x, int y, int goal_i);
+        NodePtr getRandomNode(int goal_i);
+        int getNearestNodeIndex(const std::vector<NodePtr>& node_list, const NodePtr& rnd_node);
+        bool checkIfOutsidePlayArea(const NodePtr& node);
+        bool checkCollision(const NodePtr& node);
+        std::pair<double, double> clacDistanceAndAngle(const NodePtr& from_node, const NodePtr& to_node);
 
     protected:
         costmap_2d::Costmap2D* costmap_;
@@ -54,7 +95,18 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
             return x + nx_ * y;
         }
 
+        inline float randone() {
+            return rand() % (N + 1) / (float)(N + 1);
+        }
+
         unsigned char* costs_;
+
+        std::pair<int, int> rand_area_;
+        double expand_dis_;
+        double path_resolution_;
+        double goal_sample_rate_;
+        double max_iter_;
+        std::vector<int> play_area_;
 
     };
 };

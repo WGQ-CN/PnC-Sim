@@ -35,6 +35,13 @@ namespace rrt_global_planner {
 
             plan_pub_ = private_nh.advertise<nav_msgs::Path>("plan", 1);
 
+            rand_area_ = std::pair<int, int>{0, min(nx_, ny_)};
+            expand_dis_ = 100;
+            path_resolution_ = 2;
+            goal_sample_rate_ = 30;
+            max_iter_ = 50000;
+            // play_area_ = std::vector<int>{0, nx_, 0, ny_};
+
             initialized_ = true;
         } else
             ROS_WARN("This planner has already been initialized, you can't call it twice, doing nothing");
@@ -96,6 +103,34 @@ namespace rrt_global_planner {
         int start_i = toIndex(start_x, start_y);
         int goal_i = toIndex(goal_x, goal_y);
 
+        NodePtr start_node(new Node(start_i, start_x, start_y));
+        NodePtr goal_node(new Node(goal_i, goal_x, goal_y));
+
+        std::vector<NodePtr> node_list = {start_node};
+        
+        for (int i = 0; i < max_iter_; ++i) {
+            NodePtr rnd_node = getRandomNode(goal_i);
+            int nearest_ind = getNearestNodeIndex(node_list, rnd_node);
+            NodePtr nearest_node = node_list[nearest_ind];
+
+            NodePtr new_node = steer(nearest_node, rnd_node);
+
+            if (checkIfOutsidePlayArea(new_node) && checkCollision(new_node)) {
+                node_list.push_back(new_node);
+            }
+
+            ROS_INFO("%f", calcDist2Goal(node_list.back()->x_, node_list.back()->y_, goal_i));
+
+            if (calcDist2Goal(node_list.back()->x_, node_list.back()->y_, goal_i) <= expand_dis_) {
+                NodePtr final_node = steer(node_list.back(), goal_node);
+                if (checkCollision(final_node)) {
+                    node_list.push_back(final_node);
+                    generateFinalCourse(plan, node_list);
+                    break;
+                }
+            }
+        }
+
         publishPlan(plan);
         return true;
     }
@@ -132,6 +167,11 @@ namespace rrt_global_planner {
         //set the associated costs in the cost map to be free
         costmap_->setCost(mx, my, costmap_2d::FREE_SPACE);
     }
+
+    void RRTGlobalPlanner::mapToWorld(double mx, double my, double& wx, double& wy) {
+        wx = mx * costmap_->getResolution() + costmap_->getOriginX();
+        wy = my * costmap_->getResolution() + costmap_->getOriginY();
+    }
     
     double RRTGlobalPlanner::manhattanDistance(double x1, double y1, double x2, double y2) {
         double res = fabs(x2 - x1) + fabs(y1 - y2);
@@ -143,8 +183,150 @@ namespace rrt_global_planner {
         return res;
     }
 
-    double RRTGlobalPlanner::calculateHeuristics(double x, double y, double goal_x, double goal_y) {
-        return euclideanDistance(x, y, goal_x, goal_y);;
+    NodePtr RRTGlobalPlanner::steer(const NodePtr& from_node, const NodePtr& to_node) {
+        NodePtr new_node(new Node(from_node->index_, from_node->x_, from_node->y_));
+        std::pair<double, double> dist_and_theta = clacDistanceAndAngle(new_node, to_node);
+
+        new_node->path_x_.push_back(new_node->x_);
+        new_node->path_y_.push_back(new_node->y_);
+
+        double extend_length = expand_dis_;
+        if (extend_length > dist_and_theta.first) {
+            extend_length = dist_and_theta.first;
+        }
+
+        int n_expand = extend_length / path_resolution_;
+
+        for (int i = 0; i < n_expand; ++i) {
+            new_node->x_ = new_node->x_ + path_resolution_ * cos(dist_and_theta.second);
+            new_node->y_ = new_node->y_ + path_resolution_ * sin(dist_and_theta.second);
+            new_node->path_x_.push_back(new_node->x_);
+            new_node->path_y_.push_back(new_node->y_);
+        }
+
+        dist_and_theta = clacDistanceAndAngle(new_node, to_node);
+        if (dist_and_theta.first <= path_resolution_) {
+            new_node->path_x_.push_back(to_node->x_);
+            new_node->path_y_.push_back(to_node->y_);
+            new_node->x_ = to_node->x_;
+            new_node->y_ = to_node->y_;
+        }
+
+        new_node->index_ = toIndex(new_node->x_, new_node->y_);
+        new_node->came_from_ = from_node;
+
+        return new_node;
+    }
+
+    void RRTGlobalPlanner::generateFinalCourse(std::vector<geometry_msgs::PoseStamped>& plan, const std::vector<NodePtr>& node_list) {
+        NodePtr node = node_list.back();
+        geometry_msgs::PoseStamped tmp_pose;
+        do {
+            tmp_pose.header.frame_id = frame_id_;
+            mapToWorld(node->x_, node->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+            
+            tmp_pose.pose.position.z = 0.0;
+            tmp_pose.pose.orientation.w = 1.0;
+            tmp_pose.pose.orientation.x = 0.0;
+            tmp_pose.pose.orientation.y = 0.0;
+            tmp_pose.pose.orientation.z = 0.0;
+
+            plan.push_back(tmp_pose);
+
+            node = node->came_from_;
+        } while (node->x_ == node_list[0]->x_ && node->y_ == node_list[0]->y_);
+
+        std::reverse(plan.begin(), plan.end());
+    }
+
+    double RRTGlobalPlanner::calcDist2Goal(int x, int y, int goal_i) {
+        double dx = x - goal_i % nx_;
+        double dy = y - goal_i / nx_;
+        double dist = hypot(dx, dy);
+        return dist;
+    }
+
+    NodePtr RRTGlobalPlanner::getRandomNode(int goal_i) {
+        // std::default_random_engine rand_gen;
+        // std::uniform_int_distribution<int> distrib(1, 100);
+        // if (rand() % 100 > goal_sample_rate_) {
+        //     int x = rand_area_.first + (rand_area_.second - rand_area_.first) * randone();
+        //     int y = rand_area_.first + (rand_area_.second - rand_area_.first) * randone();
+        //     int ind = toIndex(x, y);
+        //     NodePtr rnd(new Node(ind, x, y));
+        //     return rnd;
+        // } else {
+        //     NodePtr rnd(new Node(goal_i, goal_i % nx_, goal_i / nx_));
+        //     return rnd;
+        // }
+
+        NodePtr rnd(new Node());
+        for (int i = 0; i < 10000; i++)
+        {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            
+            float map_width = costmap_->getSizeInCellsX();
+            float map_height = costmap_->getSizeInCellsY();
+            std::uniform_real_distribution<> x(-map_width, map_width);
+            std::uniform_real_distribution<> y(-map_height, map_height);
+        
+            rnd->x_ = x(gen);
+            rnd->y_ = y(gen);
+            rnd->index_ = toIndex(rnd->x_, rnd->y_);
+            if (isCellFree(rnd->index_)) {
+                ROS_INFO("%d", rnd->index_);
+                return rnd;
+            }
+        }
+        return rnd;
+
+    }
+
+    int RRTGlobalPlanner::getNearestNodeIndex(const std::vector<NodePtr>& node_list, const NodePtr& rnd_node) {
+        int min_ind = 0;
+        double min_dist = inf;
+        int p_count = node_list.size();
+        for (int i = 0; i < p_count; ++i) {
+            double dx = node_list[i]->x_ - rnd_node->x_;
+            double dy = node_list[i]->y_ - rnd_node->y_;
+            double dist = hypot(dx, dy);
+            if (dist < min_dist) {
+                min_dist = dist;
+                min_ind = i;
+            }
+        }
+        return min_ind;
+    }
+
+    bool RRTGlobalPlanner::checkIfOutsidePlayArea(const NodePtr& node) {
+        if (play_area_.size() < 4) {
+            return true;
+        }
+        if (node->x_ < play_area_[1] || node->x_ > play_area_[2] || node->y_ < play_area_[3] || node->y_ > play_area_[4]) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    bool RRTGlobalPlanner::checkCollision(const NodePtr& node) {
+        int p_count = node->path_x_.size();
+        for (int i = 0; i < p_count; ++i) {
+            if (!isCellFree(node->path_x_[i], node->path_y_[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::pair<double, double> RRTGlobalPlanner::clacDistanceAndAngle(const NodePtr& from_node, const NodePtr& to_node) {
+        double dx = to_node->x_ - from_node->x_;
+        double dy = to_node->y_ - from_node->y_;
+        double d = hypot(dx, dy);
+        double theta = atan2(dy, dx);
+        std::pair<double, double> res(d, theta);
+        return res;
     }
 
     bool RRTGlobalPlanner::isCellFree(int index) {
@@ -160,11 +342,6 @@ namespace rrt_global_planner {
     bool RRTGlobalPlanner::isCellFree(int x, int y) {
         int tmp_i = toIndex(x, y);
         return isCellFree(tmp_i);
-    }
-
-    void RRTGlobalPlanner::mapToWorld(double mx, double my, double& wx, double& wy) {
-        wx = mx * costmap_->getResolution() + costmap_->getOriginX();
-        wy = my * costmap_->getResolution() + costmap_->getOriginY();
     }
 
 };

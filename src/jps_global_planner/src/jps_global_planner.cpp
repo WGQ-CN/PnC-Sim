@@ -102,7 +102,6 @@ namespace jps_global_planner {
         GridNodePtr start_ptr(new GridNode(start_i, start_x, start_y));
         start_ptr->g_cost_ = 0;
         open_set_.insert(make_pair(0, start_ptr));
-        start_ptr->id_ = 1;
 
         int c = 0;
         int cs = ns_ * 2;

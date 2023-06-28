@@ -27,7 +27,6 @@ typedef std::shared_ptr<GridNode> GridNodePtr;
 
 struct GridNode
 {
-    int id_;
     int x_, y_;
     int index_;
 
@@ -35,7 +34,6 @@ struct GridNode
     GridNodePtr came_from_;
 
     GridNode(int index, int x, int y) {
-        id_ = 0;
         index_ = index;
         x_ = x;
         y_ = y;
@@ -64,13 +62,13 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         void initialize(std::string name, costmap_2d::Costmap2D* costmap, std::string frame_id);
         void publishPlan(const std::vector<geometry_msgs::PoseStamped>& path);
         void clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my);
+        void mapToWorld(double mx, double my, double& wx, double& wy);
         double manhattanDistance(double x1, double y1, double x2, double y2);
         double euclideanDistance(double x1, double y1, double x2, double y2);
         double calculateHeuristics(double x, double y, double goal_x, double goal_y);
+        bool findPath(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i);
         bool isCellFree(int index);
         bool isCellFree(int x, int y);
-        bool findPath(std::vector<geometry_msgs::PoseStamped>& plan, int start_i, int goal_i);
-        void mapToWorld(double mx, double my, double& wx, double& wy);
 
         void getDirections(std::vector<std::pair<int, int>>& directions, GridNodePtr curr_ptr, int start_i);
         bool hasForcedNeighbours(GridNodePtr curr_ptr, const std::pair<int, int>& direction);
