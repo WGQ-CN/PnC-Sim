@@ -11,7 +11,9 @@
         "/home/wgq/catkin_ws/src/navigation_example/include/**",
         "/usr/include/**",
         "/home/wgq/catkin_ws/src/better_astar_global_planner/include/**",
-        "/home/wgq/catkin_ws/src/jps_global_planner/include/**"
+        "/home/wgq/catkin_ws/src/jps_global_planner/include/**",
+        "/home/wgq/catkin_ws/src/rrt_star_global_planner/include/**",
+        "/home/wgq/catkin_ws/src/rrt_global_planner/include/**"
       ],
       "name": "ROS",
       "intelliSenseMode": "gcc-x64",
