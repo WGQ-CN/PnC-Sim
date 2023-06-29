@@ -41,7 +41,9 @@ namespace rrt_global_planner {
             path_resolution_ = 2;
             goal_sample_rate_ = 30;
             max_iter_ = 50000;
-            // play_area_ = std::vector<int>{0, nx_, 0, ny_};
+            play_area_ = std::vector<int>{0, nx_, 0, ny_};
+
+            srand((int)time(0));
 
             initialized_ = true;
         } else
@@ -130,7 +132,6 @@ namespace rrt_global_planner {
             }
         }
 
-        path_nodes_pub_.publish(path_nodes_);
         publishPlan(plan);
         return true;
     }
@@ -184,38 +185,6 @@ namespace rrt_global_planner {
     }
 
     NodePtr RRTGlobalPlanner::steer(const NodePtr& from_node, const NodePtr& to_node) {
-        // NodePtr new_node(new Node(from_node->index_, from_node->x_, from_node->y_));
-        // std::pair<double, double> dist_and_theta = clacDistanceAndAngle(new_node, to_node);
-
-        // new_node->path_x_.push_back(new_node->x_);
-        // new_node->path_y_.push_back(new_node->y_);
-
-        // double extend_length = expand_dis_;
-        // if (extend_length > dist_and_theta.first) {
-        //     extend_length = dist_and_theta.first;
-        // }
-
-        // int n_expand = extend_length / path_resolution_;
-
-        // for (int i = 0; i < n_expand; ++i) {
-        //     new_node->x_ = new_node->x_ + path_resolution_ * cos(dist_and_theta.second);
-        //     new_node->y_ = new_node->y_ + path_resolution_ * sin(dist_and_theta.second);
-        //     new_node->path_x_.push_back(new_node->x_);
-        //     new_node->path_y_.push_back(new_node->y_);
-        // }
-
-        // dist_and_theta = clacDistanceAndAngle(new_node, to_node);
-        // if (dist_and_theta.first <= path_resolution_) {
-        //     new_node->path_x_.push_back(to_node->x_);
-        //     new_node->path_y_.push_back(to_node->y_);
-        //     new_node->x_ = to_node->x_;
-        //     new_node->y_ = to_node->y_;
-        // }
-
-        // new_node->index_ = toIndex(new_node->x_, new_node->y_);
-        // new_node->came_from_ = from_node;
-
-        // return new_node;
 
         NodePtr new_node(new Node(from_node->index_, from_node->x_, from_node->y_));
         std::pair<double, double> dist_and_theta = clacDistanceAndAngle(new_node, to_node);
@@ -254,25 +223,26 @@ namespace rrt_global_planner {
     void RRTGlobalPlanner::generateFinalCourse(std::vector<geometry_msgs::PoseStamped>& plan, const std::vector<NodePtr>& node_list) {
         NodePtr node = node_list.back();
         geometry_msgs::PoseStamped tmp_pose;
-        int cnt = 0;
-        ros::Time time = ros::Time::now();
+        // visualization_msgs::MarkerArray path_nodes;
+        // int cnt = 0;
+        // ros::Time time = ros::Time::now();
         do {
-            visualization_msgs::Marker path_node;
-            path_node.header.frame_id = frame_id_;
-            path_node.header.stamp = time;
-            path_node.id = cnt++;
-            path_node.type = visualization_msgs::Marker::SPHERE;
-            path_node.scale.x = 0.1;
-            path_node.scale.y = 0.1;
-            path_node.scale.z = 0.1;
-            path_node.color.a = 1.0;
-            path_node.color.r = 1.0;
-            path_node.pose.orientation.w = 1.0;
-            path_node.pose.orientation.x = 0.0;
-            path_node.pose.orientation.y = 0.0;
-            path_node.pose.orientation.z = 0.0;
-            mapToWorld(node->x_, node->y_, path_node.pose.position.x, path_node.pose.position.y);
-            path_nodes_.markers.push_back(path_node);
+            // visualization_msgs::Marker path_node;
+            // path_node.header.frame_id = frame_id_;
+            // path_node.header.stamp = time;
+            // path_node.id = cnt++;
+            // path_node.type = visualization_msgs::Marker::SPHERE;
+            // path_node.scale.x = 0.1;
+            // path_node.scale.y = 0.1;
+            // path_node.scale.z = 0.1;
+            // path_node.color.a = 1.0;
+            // path_node.color.r = 1.0;
+            // path_node.pose.orientation.w = 1.0;
+            // path_node.pose.orientation.x = 0.0;
+            // path_node.pose.orientation.y = 0.0;
+            // path_node.pose.orientation.z = 0.0;
+            // mapToWorld(node->x_, node->y_, path_node.pose.position.x, path_node.pose.position.y);
+            // path_nodes.markers.push_back(path_node);
 
             tmp_pose.header.frame_id = frame_id_;
             mapToWorld(node->x_, node->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
@@ -289,6 +259,8 @@ namespace rrt_global_planner {
         } while (!(node->x_ == node_list[0]->x_ && node->y_ == node_list[0]->y_));
 
         std::reverse(plan.begin(), plan.end());
+
+        // path_nodes_pub_.publish(path_nodes);
     }
 
     double RRTGlobalPlanner::calcDist2Goal(int x, int y, int goal_i) {
@@ -299,40 +271,10 @@ namespace rrt_global_planner {
     }
 
     NodePtr RRTGlobalPlanner::getRandomNode(int goal_i) {
-        // std::default_random_engine rand_gen;
-        // std::uniform_int_distribution<int> distrib(1, 100);
-        // if (rand() % 100 > goal_sample_rate_) {
-        //     int x = rand_area_.first + (rand_area_.second - rand_area_.first) * randone();
-        //     int y = rand_area_.first + (rand_area_.second - rand_area_.first) * randone();
-        //     int ind = toIndex(x, y);
-        //     NodePtr rnd(new Node(ind, x, y));
-        //     return rnd;
-        // } else {
-        //     NodePtr rnd(new Node(goal_i, goal_i % nx_, goal_i / nx_));
-        //     return rnd;
-        // }
-
-        // NodePtr rnd(new Node());
-        // for (int i = 0; i < 10000; i++)
-        // {
-        //     std::random_device rd;
-        //     std::mt19937 gen(rd());
-            
-        //     std::uniform_real_distribution<> x(0, nx_);
-        //     std::uniform_real_distribution<> y(0, ny_);
-        
-        //     rnd->x_ = x(gen);
-        //     rnd->y_ = y(gen);
-        //     rnd->index_ = toIndex(rnd->x_, rnd->y_);
-        //     if (isCellFree(rnd->index_)) {
-        //         ROS_INFO("%d", rnd->index_);
-        //         return rnd;
-        //     }
-        // }
-        // return rnd;
 
         NodePtr rnd(new Node());
-        // if (rand() % 100 > goal_sample_rate_) {
+
+        if (rand() % 100 > goal_sample_rate_) {
             std::random_device rd;
             std::mt19937 gen(rd());
             
@@ -344,13 +286,13 @@ namespace rrt_global_planner {
             rnd->index_ = toIndex(rnd->x_, rnd->y_);
             
             return rnd;
-        // } else {
-        //     rnd->x_ = goal_i % nx_;
-        //     rnd->y_ = goal_i / nx_;
-        //     rnd->index_ = goal_i;
+        } else {
+            rnd->x_ = goal_i % nx_;
+            rnd->y_ = goal_i / nx_;
+            rnd->index_ = goal_i;
 
-        //     return rnd;
-        // }
+            return rnd;
+        }
 
     }
 
@@ -374,7 +316,7 @@ namespace rrt_global_planner {
         if (play_area_.size() < 4) {
             return true;
         }
-        if (node->x_ < play_area_[1] || node->x_ > play_area_[2] || node->y_ < play_area_[3] || node->y_ > play_area_[4]) {
+        if (node->x_ < play_area_[0] || node->x_ > play_area_[1] || node->y_ < play_area_[2] || node->y_ > play_area_[3]) {
             return false;
         } else {
             return true;

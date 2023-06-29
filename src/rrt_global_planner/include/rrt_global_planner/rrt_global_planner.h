@@ -17,6 +17,8 @@
 
 #include <cmath>
 #include <random>
+#include <time.h>
+#include <cstdlib>
 
 #include <visualization_msgs/MarkerArray.h>
 
@@ -111,8 +113,6 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         double goal_sample_rate_;
         double max_iter_;
         std::vector<int> play_area_;
-
-        visualization_msgs::MarkerArray path_nodes_;
 
     };
 };
