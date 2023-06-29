@@ -18,6 +18,8 @@
 #include <cmath>
 #include <random>
 
+#include <visualization_msgs/MarkerArray.h>
+
 using std::string;
 
 namespace rrt_global_planner {
@@ -89,6 +91,8 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         ros::Publisher plan_pub_;
         bool initialized_;
 
+        ros::Publisher path_nodes_pub_;
+
     private:
         int nx_, ny_, ns_;
         inline int toIndex(int x, int y) {
@@ -107,6 +111,8 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         double goal_sample_rate_;
         double max_iter_;
         std::vector<int> play_area_;
+
+        visualization_msgs::MarkerArray path_nodes_;
 
     };
 };

@@ -512,6 +512,14 @@ Visualization Manager:
       Topic: /move_base/RRTGlobalPlanner/plan
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /move_base/RRTGlobalPlanner/path_nodes
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -549,10 +557,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 27.557523727416992
+      Scale: 60.92090606689453
       Target Frame: <Fixed Frame>
-      X: 9.899693489074707
-      Y: -0.4358524680137634
+      X: 4.404242515563965
+      Y: 0.6282102465629578
     Saved: ~
 Window Geometry:
   Displays:
