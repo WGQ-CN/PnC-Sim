@@ -16,6 +16,7 @@
 #include <nav_msgs/Path.h>
 #include <unordered_map>
 #include <memory>
+#include <visualization_msgs/MarkerArray.h>
 
 using std::string;
 
@@ -79,6 +80,8 @@ class JPSGlobalPlanner : public nav_core::BaseGlobalPlanner {
         std::string frame_id_;
         ros::Publisher plan_pub_;
         bool initialized_;
+
+        ros::Publisher path_nodes_pub_;
 
     private:
         int nx_, ny_, ns_;

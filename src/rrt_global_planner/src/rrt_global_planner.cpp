@@ -223,26 +223,26 @@ namespace rrt_global_planner {
     void RRTGlobalPlanner::generateFinalCourse(std::vector<geometry_msgs::PoseStamped>& plan, const std::vector<NodePtr>& node_list) {
         NodePtr node = node_list.back();
         geometry_msgs::PoseStamped tmp_pose;
-        // visualization_msgs::MarkerArray path_nodes;
-        // int cnt = 0;
-        // ros::Time time = ros::Time::now();
+        visualization_msgs::MarkerArray path_nodes;
+        int cnt = 0;
+        ros::Time time = ros::Time::now();
         do {
-            // visualization_msgs::Marker path_node;
-            // path_node.header.frame_id = frame_id_;
-            // path_node.header.stamp = time;
-            // path_node.id = cnt++;
-            // path_node.type = visualization_msgs::Marker::SPHERE;
-            // path_node.scale.x = 0.1;
-            // path_node.scale.y = 0.1;
-            // path_node.scale.z = 0.1;
-            // path_node.color.a = 1.0;
-            // path_node.color.r = 1.0;
-            // path_node.pose.orientation.w = 1.0;
-            // path_node.pose.orientation.x = 0.0;
-            // path_node.pose.orientation.y = 0.0;
-            // path_node.pose.orientation.z = 0.0;
-            // mapToWorld(node->x_, node->y_, path_node.pose.position.x, path_node.pose.position.y);
-            // path_nodes.markers.push_back(path_node);
+            visualization_msgs::Marker path_node;
+            path_node.header.frame_id = frame_id_;
+            path_node.header.stamp = time;
+            path_node.id = cnt++;
+            path_node.type = visualization_msgs::Marker::SPHERE;
+            path_node.scale.x = 0.1;
+            path_node.scale.y = 0.1;
+            path_node.scale.z = 0.1;
+            path_node.color.a = 1.0;
+            path_node.color.r = 1.0;
+            path_node.pose.orientation.w = 1.0;
+            path_node.pose.orientation.x = 0.0;
+            path_node.pose.orientation.y = 0.0;
+            path_node.pose.orientation.z = 0.0;
+            mapToWorld(node->x_, node->y_, path_node.pose.position.x, path_node.pose.position.y);
+            path_nodes.markers.push_back(path_node);
 
             tmp_pose.header.frame_id = frame_id_;
             mapToWorld(node->x_, node->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
@@ -260,7 +260,7 @@ namespace rrt_global_planner {
 
         std::reverse(plan.begin(), plan.end());
 
-        // path_nodes_pub_.publish(path_nodes);
+        path_nodes_pub_.publish(path_nodes);
     }
 
     double RRTGlobalPlanner::calcDist2Goal(int x, int y, int goal_i) {

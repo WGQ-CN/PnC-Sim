@@ -14,8 +14,10 @@
     <rosparam file="$(find scout_v2_nav)/config/local_costmap_params.yaml" command="load" />
     <rosparam file="$(find scout_v2_nav)/config/global_costmap_params.yaml" command="load" />
 
-    <param name="base_global_planner" value="global_planner/GlobalPlanner" />
-    <param name="planner_frequency" value="30" />
+    <!--<param name="base_global_planner" value="global_planner/GlobalPlanner" />-->
+    <param name="base_global_planner" value="rrt_global_planner/RRTGlobalPlanner" />
+    <!--<param name="base_global_planner" value="jps_global_planner/JPSGlobalPlanner" />-->
+    <param name="planner_frequency" value="0.0" />
     <param name="planner_patience" value="5.0" />
     <!--param name="use_dijkstra" value="false" /-->
 
@@ -26,6 +28,6 @@
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find scout_description)/rviz/navigation.rviz" />
 
   <!--<node pkg="racecar_control" type="cmd_vel_converter.py" name="cmd_vel_converter" output="screen"/>-->
-  <node pkg="racecar_tracking" type="pure_pursuit.py" name="pure_pursuit" output="screen"/>
+  <!--<node pkg="racecar_tracking" type="pure_pursuit.py" name="pure_pursuit" output="screen"/>-->
 </launch>
 

@@ -34,6 +34,7 @@ namespace jps_global_planner {
             costs_ = costmap_->getCharMap();
 
             plan_pub_ = private_nh.advertise<nav_msgs::Path>("plan", 1);
+            path_nodes_pub_ = private_nh.advertise<visualization_msgs::MarkerArray>("path_nodes", 1);
 
             initialized_ = true;
         } else
@@ -267,7 +268,28 @@ namespace jps_global_planner {
 
         geometry_msgs::PoseStamped tmp_pose;
 
-        while (curr_i != start_i) {
+        visualization_msgs::MarkerArray path_nodes;
+        int cnt = 0;
+        ros::Time time = ros::Time::now();
+
+        do {
+            visualization_msgs::Marker path_node;
+            path_node.header.frame_id = frame_id_;
+            path_node.header.stamp = time;
+            path_node.id = cnt++;
+            path_node.type = visualization_msgs::Marker::SPHERE;
+            path_node.scale.x = 0.1;
+            path_node.scale.y = 0.1;
+            path_node.scale.z = 0.1;
+            path_node.color.a = 1.0;
+            path_node.color.r = 1.0;
+            path_node.pose.orientation.w = 1.0;
+            path_node.pose.orientation.x = 0.0;
+            path_node.pose.orientation.y = 0.0;
+            path_node.pose.orientation.z = 0.0;
+            mapToWorld((curr_i % nx_), (curr_i / nx_), path_node.pose.position.x, path_node.pose.position.y);
+            path_nodes.markers.push_back(path_node);
+
             // ROS_INFO("backtrack: curr_i is %d", curr_i);
             tmp_pose.header.frame_id = frame_id_;
             mapToWorld((curr_i % nx_), (curr_i / nx_), tmp_pose.pose.position.x, tmp_pose.pose.position.y);
@@ -282,21 +304,11 @@ namespace jps_global_planner {
 
             plan.push_back(tmp_pose);
             curr_i = edges_[curr_i];
-        }
+        } while (curr_i != start_i);
 
-        tmp_pose.header.frame_id = frame_id_;
-        mapToWorld((start_i % nx_), (start_i / nx_), tmp_pose.pose.position.x, tmp_pose.pose.position.y);
-        // tmp_pose.pose.position.x = (start_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
-        // tmp_pose.pose.position.y = (start_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();
-
-        tmp_pose.pose.position.z = 0.0;
-        tmp_pose.pose.orientation.w = 1.0;
-        tmp_pose.pose.orientation.x = 0.0;
-        tmp_pose.pose.orientation.y = 0.0;
-        tmp_pose.pose.orientation.z = 0.0;
-
-        plan.push_back(tmp_pose);
         std::reverse(plan.begin(), plan.end());
+
+        path_nodes_pub_.publish(path_nodes);
         return true;
     }
 
