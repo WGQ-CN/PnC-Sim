@@ -306,10 +306,59 @@ namespace jps_global_planner {
             curr_i = edges_[curr_i];
         } while (curr_i != start_i);
 
+        tmp_pose.header.frame_id = frame_id_;
+        mapToWorld((start_i % nx_), (start_i / nx_), tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+        // tmp_pose.pose.position.x = (start_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
+        // tmp_pose.pose.position.y = (start_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();
+
+        tmp_pose.pose.position.z = 0.0;
+        tmp_pose.pose.orientation.w = 1.0;
+        tmp_pose.pose.orientation.x = 0.0;
+        tmp_pose.pose.orientation.y = 0.0;
+        tmp_pose.pose.orientation.z = 0.0;
+
+        plan.push_back(tmp_pose);
+
         std::reverse(plan.begin(), plan.end());
 
         path_nodes_pub_.publish(path_nodes);
         return true;
+
+        // int curr_i = goal_i;
+
+        // geometry_msgs::PoseStamped tmp_pose;
+
+        // while (curr_i != start_i) {
+        //     // ROS_INFO("backtrack: curr_i is %d", curr_i);
+        //     tmp_pose.header.frame_id = frame_id_;
+        //     mapToWorld((curr_i % nx_), (curr_i / nx_), tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+        //     // tmp_pose.pose.position.x = (curr_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
+        //     // tmp_pose.pose.position.y = (curr_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();
+
+        //     tmp_pose.pose.position.z = 0.0;
+        //     tmp_pose.pose.orientation.w = 1.0;
+        //     tmp_pose.pose.orientation.x = 0.0;
+        //     tmp_pose.pose.orientation.y = 0.0;
+        //     tmp_pose.pose.orientation.z = 0.0;
+
+        //     plan.push_back(tmp_pose);
+        //     curr_i = edges_[curr_i];
+        // }
+
+        // tmp_pose.header.frame_id = frame_id_;
+        // mapToWorld((start_i % nx_), (start_i / nx_), tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+        // // tmp_pose.pose.position.x = (start_i % nx_) * costmap_->getResolution() + costmap_->getOriginX();
+        // // tmp_pose.pose.position.y = (start_i / nx_) * costmap_->getResolution() + costmap_->getOriginY();
+
+        // tmp_pose.pose.position.z = 0.0;
+        // tmp_pose.pose.orientation.w = 1.0;
+        // tmp_pose.pose.orientation.x = 0.0;
+        // tmp_pose.pose.orientation.y = 0.0;
+        // tmp_pose.pose.orientation.z = 0.0;
+
+        // plan.push_back(tmp_pose);
+        // std::reverse(plan.begin(), plan.end());
+        // return true;
     }
 
     void JPSGlobalPlanner::mapToWorld(double mx, double my, double& wx, double& wy) {

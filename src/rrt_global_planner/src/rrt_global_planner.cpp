@@ -258,6 +258,17 @@ namespace rrt_global_planner {
             node = node->came_from_;
         } while (!(node->x_ == node_list[0]->x_ && node->y_ == node_list[0]->y_));
 
+        tmp_pose.header.frame_id = frame_id_;
+        mapToWorld(node->x_, node->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+        
+        tmp_pose.pose.position.z = 0.0;
+        tmp_pose.pose.orientation.w = 1.0;
+        tmp_pose.pose.orientation.x = 0.0;
+        tmp_pose.pose.orientation.y = 0.0;
+        tmp_pose.pose.orientation.z = 0.0;
+
+        plan.push_back(tmp_pose);
+
         std::reverse(plan.begin(), plan.end());
 
         path_nodes_pub_.publish(path_nodes);
