@@ -37,8 +37,8 @@ namespace rrt_star_global_planner {
             path_nodes_pub_ = private_nh.advertise<visualization_msgs::MarkerArray>("path_nodes", 1);
 
             rand_area_ = std::pair<int, int>{0, min(nx_, ny_)};
-            expand_dis_ = 20;
-            path_resolution_ = 1;
+            expand_dis_ = 30;
+            path_resolution_ = 6; // Must be greater than or equal to 2
             goal_sample_rate_ = 30;
             max_iter_ = 50000;
             play_area_ = std::vector<int>{0, nx_, 0, ny_};
@@ -222,7 +222,7 @@ namespace rrt_star_global_planner {
         }
 
         new_node->index_ = toIndex(new_node->x_, new_node->y_);
-        new_node->came_from_ = from_node;
+        // new_node->came_from_ = from_node;
 
         return new_node;
     }
@@ -378,24 +378,24 @@ namespace rrt_star_global_planner {
     void RRTStarGlobalPlanner::chooseParent(NodePtr& nearest_node, NodePtr& new_node, const std::vector<NodePtr>& node_list) {
         int p_count = node_list.size();
         for (int i = 0; i < p_count; ++i) {
-            if (euclideanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < expand_dis_ &&
-            node_list[i]->cost_ + euclideanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < nearest_node->cost_ + euclideanDistance(nearest_node->x_, nearest_node->y_, new_node->x_, new_node->y_) &&
-            isPathFree(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_)) {
+            if (manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < expand_dis_ &&
+            node_list[i]->cost_ + manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < nearest_node->cost_ + manhattanDistance(nearest_node->x_, nearest_node->y_, new_node->x_, new_node->y_) &&
+            isPathFree(node_list[i], new_node)) {
                 nearest_node = node_list[i];
             }
-            new_node->cost_ = nearest_node->cost_ + euclideanDistance(nearest_node->x_, nearest_node->y_, new_node->x_, new_node->y_);
-            new_node->came_from_ = nearest_node;
         }
+        new_node->cost_ = nearest_node->cost_ + manhattanDistance(nearest_node->x_, nearest_node->y_, new_node->x_, new_node->y_);
+        new_node->came_from_ = nearest_node;
     }
 
     void RRTStarGlobalPlanner::rewire(NodePtr& new_node, std::vector<NodePtr>& node_list) {
         int p_count = node_list.size();
         for (int i = 0; i < p_count; ++i) {
             if (node_list[i] != new_node->came_from_ &&
-            euclideanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < expand_dis_ &&
-            new_node->cost_ + euclideanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < node_list[i]->cost_ &&
-            isPathFree(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_)) {
-                node_list[i]->cost_ = new_node->cost_ + euclideanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_);
+            manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < expand_dis_ &&
+            new_node->cost_ + manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < node_list[i]->cost_ &&
+            isPathFree(new_node, node_list[i])) {
+                node_list[i]->cost_ = new_node->cost_ + manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_);
                 node_list[i]->came_from_ = new_node;
             }
         }
@@ -420,10 +420,6 @@ namespace rrt_star_global_planner {
             }
         }
         return true;
-    }
-
-    bool RRTStarGlobalPlanner::isPathFree(int x1, int y1, int x2, int y2) {
-        return false;
     }
 
 };
