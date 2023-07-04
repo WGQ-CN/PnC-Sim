@@ -14,7 +14,7 @@
     <rosparam file="$(find rrt_star_global_planner)/config/global_costmap_params.yaml" command="load" />
     <rosparam file="$(find rrt_star_global_planner)/config/teb_local_planner_params.yaml" command="load" />
 
-    <param name="base_global_planner" value="RRTstar_planner/RRTstarPlannerROS"/>
+    <param name="base_global_planner" value="rrt_star_global_planner/RRTStarGlobalPlanner"/>
     <param name="planner_frequency" value="0.0" />
     <param name="planner_patience" value="20.0" />
     <param name="controller_frequency" value="5.0" />
@@ -29,7 +29,7 @@
   </node>
 
   <include file="$(find racecar_nav)/launch/amcl.launch"/>
-  <include file="$(find rrt_star_global_planner)/launch/rrt_rviz.launch"/>
+  <include file="$(find rrt_star_global_planner)/launch/rrt_star_rviz.launch"/>
 
   <node pkg="racecar_control" type="cmd_vel_converter.py" name="cmd_vel_converter" output="screen"/>
 </launch>
