@@ -7,7 +7,6 @@ Panels:
         - /Global Options1
         - /TF1/Frames1
         - /TebMarker1/Namespaces1
-        - /OptimizePath1/Status1
       Splitter Ratio: 0.5
     Tree Height: 455
   - Class: rviz/Selection
@@ -491,7 +490,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz/Path
       Color: 25; 255; 0
-      Enabled: false
+      Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -510,15 +509,15 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /move_base/RRTGlobalPlanner/plan
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /move_base/RRTGlobalPlanner/path_nodes
       Name: MarkerArray
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
-      Value: false
+      Value: true
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
@@ -580,10 +579,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 38.283626556396484
+      Scale: 27.603565216064453
       Target Frame: <Fixed Frame>
-      X: 9.61616325378418
-      Y: 0.28510457277297974
+      X: 16.987340927124023
+      Y: 0.8470661044120789
     Saved: ~
 Window Geometry:
   Displays:

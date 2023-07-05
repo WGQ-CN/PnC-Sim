@@ -449,6 +449,253 @@ namespace rrt_global_planner {
             }
             if (i - 1 == j) i = i - 1;
         }
+
+        // unsigned int path_cnt = node_path_.size();
+        // NodePtr p_start = node_path_[0];
+        // NodePtr p_goal = node_path_[path_cnt - 1];
+        // int p_tmp_x = p_start->x_;
+        // int p_tmp_y = p_start->y_;
+        // std::vector<NodePtr> path_res = {p_start};
+
+        // std::vector<NodePtr> P;
+        // std::pair<int, int> p2p1;
+        // std::pair<int, int> p2p3;
+        // double x1, y1, x2, y2;
+        // NodePtr A, B, C;
+        // std::pair<int, int> BA;
+        // std::pair<int, int> BC;
+        // double L_BA, L_BC, L;
+        // double theta;
+        // double L_BO, R;
+        // double c1, c2;
+        // double xo, yo;
+        // double theta_BA, theta_BC;
+        // double theta1, theta2;
+        // unsigned int n_points = 10;
+
+        // for (int i = 0; i < path_cnt - 2; ++i) {
+        //     P = {node_path_[i], node_path_[i + 1], node_path_[i + 2]};
+        //     p2p1 = {P[0]->x_ - P[1]->x_, P[0]->y_ - P[1]->y_};
+        //     p2p3 = {P[2]->x_ - P[1]->x_, P[2]->y_ - P[1]->y_};
+        //     x1 = p2p1.first;
+        //     y1 = p2p1.second;
+        //     x2 = p2p3.first;
+        //     y2 = p2p3.second;
+
+        //     B = P[1];
+        //     if (x1 > 0 && y1 > 0) {
+        //         if (x2 > 0 && y2 > 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             } else {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             }
+        //         } else if (x2 <= 0 && y2 >= 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         } else if (x2 >= 0 && y2 <= 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         } else if (x2 < 0 && y2 < 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             } else {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             }
+        //         }
+        //     } else if (x1 < 0 && y1 > 0) {
+        //         if (x2 < 0 && y2 > 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             } else {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             }
+        //         } else if (x2 >= 0 && y2 >= 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         } else if (x2 <= 0 && y2 <= 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         } else if (x2 > 0 && y2 < 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             } else {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             }
+        //         }
+        //     } else if (x1 < 0 && y1 < 0) {
+        //         if (x2 < 0 && y2 < 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             } else {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             }
+        //         } else if (x2 <= 0 && y2 >= 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         } else if (x2 >= 0 && y2 <= 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         } else if (x2 > 0 && y2 > 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             } else {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             }
+        //         }
+        //     } else if (x1 > 0 && y1 < 0) {
+        //         if (x2 > 0 && y2 < 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             } else {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             }
+        //         } else if (x2 >= 0 && y2 >= 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         } else if (x2 <= 0 && y2 <= 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         } else if (x2 < 0 && y2 > 0) {
+        //             if (y2 / x2 > y1 / x1) {
+        //                 A = P[0];
+        //                 C = P[2];
+        //             } else {
+        //                 A = P[2];
+        //                 C = P[0];
+        //             }
+        //         }
+        //     } else if (x1 == 0 && y1 > 0) {
+        //         if (x2 > 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         } else if (x2 < 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         }
+        //     } else if (x1 == 0 && y1 < 0) {
+        //         if (x2 > 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         } else if (x2 < 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         }
+        //     } else if (x1 > 0 && y1 == 0) {
+        //         if (y2 > 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         } else if (y2 < 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         }
+        //     } else if (x1 < 0 && y1 == 0) {
+        //         if (y2 > 0) {
+        //             A = P[0];
+        //             C = P[2];
+        //         } else if (y2 < 0) {
+        //             A = P[2];
+        //             C = P[0];
+        //         }
+        //     }
+
+        //     BA = {A->x_ - B->x_, A->y_ - B->y_};
+        //     BC = {C->x_ - B->x_, C->y_ - B->y_};
+
+        //     L_BA = sqrt(double((A->x_ - B->x_) * (A->x_ - B->x_) + (A->y_ - B->y_) * (A->y_ - B->y_)));
+        //     L_BC = sqrt(double((C->x_ - B->x_) * (C->x_ - B->x_) + (C->y_ - B->y_) * (C->y_ - B->y_)));
+        //     L = min(L_BA, L_BC) / 2;
+
+        //     theta = acos(double(BA.first * BC.first + BA.second * BC.second) / (L_BA * L_BC));
+
+        //     L_BO = L / cos(0.5 * theta);
+        //     R = L * tan(0.5 * theta);
+
+        //     c1 = L_BA * L_BO * cos(0.5 * theta) + BA.first * B->x_ + BA.second * B->y_;
+        //     c2 = L_BC * L_BO * cos(0.5 * theta) + BC.first * B->x_ + BC.second * B->y_;
+
+        //     if (BA.second == 0) {
+        //         xo = c1 / BA.first;
+        //         yo = (c2 - BC.first * xo) / BC.second;
+        //     } else {
+        //         xo = (BC.second / BA.second * c1 - c2) / (BC.second * BA.first / BA.second - BC.first);
+        //         yo = (c1 - BA.first * xo) / BA.second;
+        //     }
+            
+        //     if (BA.first == 0) {
+        //         if (BA.second > 0) {theta_BA = 0.5 * M_PI;}
+        //         else {theta_BA = - 0.5 * M_PI;}
+        //     } else if (BA.first > 0) {
+        //         theta_BA = std::fmod(std::fmod(atan(double(double(BA.second) / double(BA.first))) + 2 * M_PI, 2 * M_PI) + 2 * M_PI, 2 * M_PI);
+        //     } else {
+        //         theta_BA = atan(double(double(BA.second) / double(BA.first))) + M_PI;
+        //     }
+
+        //     if (BC.first == 0) {
+        //         if (BC.second > 0) {theta_BC = 0.5 * M_PI;}
+        //         else {theta_BC = - 0.5 * M_PI;}
+        //     } else if (BC.first > 0) {
+        //         theta_BC = std::fmod(std::fmod(atan(double(double(BC.second) / double(BC.first))) + 2 * M_PI, 2 * M_PI) + 2 * M_PI, 2 * M_PI);
+        //     } else {
+        //         theta_BC = atan(double(double(BC.second) / double(BC.first))) + M_PI;
+        //     }
+
+        //     theta1 = std::fmod(std::fmod((theta_BA + 0.5 * M_PI) + 2 * M_PI, 2 * M_PI) + 2 * M_PI, 2 * M_PI);
+        //     theta2 = std::fmod(std::fmod((theta_BC - 0.5 * M_PI) + 2 * M_PI, 2 * M_PI) + 2 * M_PI, 2 * M_PI);
+
+        //     if (theta2 < theta1) {
+        //         theta2 = theta2 + 2 * M_PI;
+        //     }
+
+        //     double delta_theta = theta2 - theta1;
+        //     std::vector<double> theta_list;
+        //     for (int i = 0; i <= n_points; ++i) {
+        //         theta_list.push_back(theta1 + i * delta_theta / n_points);
+        //     }
+
+        //     std::vector<double> rho(n_points + 1, R);
+
+        //     std::vector<int> X(n_points + 1);
+        //     std::vector<int> Y(n_points + 1);
+
+        //     for (int i = 0; i <= n_points; ++i) {
+        //         X[i] = round(rho[i] * cos(theta_list[i]) + xo);
+        //         Y[i] = round(rho[i] * sin(theta_list[i]) + yo);
+        //     }
+
+        //     if (manhattanDistance(X[0], Y[0], p_tmp_x, p_tmp_y) < manhattanDistance(X[n_points], Y[n_points], p_tmp_x, p_tmp_y)) {
+        //         for (int i = 0; i <= n_points; ++i) {
+        //             NodePtr p(new Node(toIndex(X[i], Y[i]), X[i], Y[i]));
+        //             path_res.push_back(p);
+        //         }
+        //         p_tmp_x = X[n_points];
+        //         p_tmp_y = Y[n_points];
+        //     } else {
+        //         for (int i = n_points; i >= 0; --i) {
+        //             NodePtr p(new Node(toIndex(X[i], Y[i]), X[i], Y[i]));
+        //             path_res.push_back(p);
+        //         }
+        //         p_tmp_x = X[0];
+        //         p_tmp_y = Y[0];
+        //     }
+        // }
+        // path_res.push_back(p_goal);
+
+        // node_path_ = path_res;
     }
 
     bool RRTGlobalPlanner::isPathFree(const NodePtr& from_pose, const NodePtr& to_pose) {
@@ -473,7 +720,5 @@ namespace rrt_global_planner {
         }
         return true;
     }
-
-    
 
 };
