@@ -35,10 +35,11 @@ namespace rrt_global_planner {
 
             plan_pub_ = private_nh.advertise<nav_msgs::Path>("plan", 1);
             path_nodes_pub_ = private_nh.advertise<visualization_msgs::MarkerArray>("path_nodes", 1);
+            optimize_path_pub_ = private_nh.advertise<nav_msgs::Path>("optimize_path", 1);
 
             rand_area_ = std::pair<int, int>{0, min(nx_, ny_)};
             expand_dis_ = 30;
-            path_resolution_ = 5;
+            path_resolution_ = 2;
             goal_sample_rate_ = 30;
             max_iter_ = 50000;
             play_area_ = std::vector<int>{0, nx_, 0, ny_};
@@ -58,6 +59,7 @@ namespace rrt_global_planner {
             return false;
         }
 
+        node_path_.clear();
         plan.clear();
 
         ros::NodeHandle nh;
@@ -132,10 +134,11 @@ namespace rrt_global_planner {
             }
         }
 
-        waypointOptimize(plan);
-
         publishPlan(plan);
         publishPlanPoints(plan);
+
+        waypointOptimize();
+        publishOptimizePath();
         return true;
     }
 
@@ -185,6 +188,28 @@ namespace rrt_global_planner {
             path_nodes.markers.push_back(path_node);
         }
         path_nodes_pub_.publish(path_nodes);
+    }
+
+    void RRTGlobalPlanner::publishOptimizePath() {
+        nav_msgs::Path gui_path;
+        gui_path.poses.resize(node_path_.size());
+
+        gui_path.header.frame_id = frame_id_;
+        gui_path.header.stamp = ros::Time::now();
+
+        // Extract the plan in world co-ordinates, we assume the path is all in the same frame
+        for (unsigned int i = 0; i < node_path_.size(); i++) {
+            gui_path.poses[i].header.frame_id = frame_id_;
+            mapToWorld(node_path_[i]->x_, node_path_[i]->y_, gui_path.poses[i].pose.position.x, gui_path.poses[i].pose.position.y);
+            
+            gui_path.poses[i].pose.position.z = 0.0;
+            gui_path.poses[i].pose.orientation.w = 1.0;
+            gui_path.poses[i].pose.orientation.x = 0.0;
+            gui_path.poses[i].pose.orientation.y = 0.0;
+            gui_path.poses[i].pose.orientation.z = 0.0;
+        }
+
+        optimize_path_pub_.publish(gui_path);
     }
 
     void RRTGlobalPlanner::clearRobotCell(const geometry_msgs::PoseStamped& global_pose, unsigned int mx, unsigned int my) {
@@ -272,6 +297,7 @@ namespace rrt_global_planner {
             // path_node.pose.orientation.z = 0.0;
             // mapToWorld(node->x_, node->y_, path_node.pose.position.x, path_node.pose.position.y);
             // path_nodes.markers.push_back(path_node);
+            node_path_.push_back(node);
 
             tmp_pose.header.frame_id = frame_id_;
             mapToWorld(node->x_, node->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
@@ -296,8 +322,10 @@ namespace rrt_global_planner {
         tmp_pose.pose.orientation.y = 0.0;
         tmp_pose.pose.orientation.z = 0.0;
 
+        node_path_.push_back(node);
         plan.push_back(tmp_pose);
 
+        std::reverse(node_path_.begin(), node_path_.end());
         std::reverse(plan.begin(), plan.end());
 
         // path_nodes_pub_.publish(path_nodes);
@@ -397,8 +425,8 @@ namespace rrt_global_planner {
         return isCellFree(tmp_i);
     }
 
-    void RRTGlobalPlanner::waypointOptimize(std::vector<geometry_msgs::PoseStamped>& plan) {
-        size_t p_count = plan.size();
+    void RRTGlobalPlanner::waypointOptimize() {
+        size_t p_count = node_path_.size();
 
         int i = p_count - 1;
         while (i > 1)
@@ -406,13 +434,13 @@ namespace rrt_global_planner {
             int j = 0;
             while (j <= i - 2)
             {
-                if (isPathFree(plan[j], plan[i])) {
-                    auto it = plan.begin();
+                if (isPathFree(node_path_[j], node_path_[i])) {
+                    auto it = node_path_.begin();
                     for (int k = 0; k < j + 1; ++k) {
                         ++it;
                     }
                     for (int k = j + 1; k <= i - 1; ++k) {
-                        it = plan.erase(it);
+                        it = node_path_.erase(it);
                     }
                     i = j;
                     break;
@@ -423,30 +451,29 @@ namespace rrt_global_planner {
         }
     }
 
-    bool RRTGlobalPlanner::isPathFree(const geometry_msgs::PoseStamped& from_pose, const geometry_msgs::PoseStamped& to_pose) {
-        unsigned int x1, y1, x2, y2;
-        costmap_->worldToMap(from_pose.pose.position.x, from_pose.pose.position.y, x1, y1);
-        costmap_->worldToMap(to_pose.pose.position.x, to_pose.pose.position.y, x2, y2);
-        double dx = x2 - x1;
-        double dy = y2 - y1;
+    bool RRTGlobalPlanner::isPathFree(const NodePtr& from_pose, const NodePtr& to_pose) {
+        double dx = to_pose->x_ - from_pose->x_;
+        double dy = to_pose->y_ - from_pose->y_;
         double dist = hypot(dx, dy);
         double theta = atan2(dy, dx);
         
-        if (!isCellFree(x1, y1) || !isCellFree(x2, y2)) {
+        if (!isCellFree(to_pose->x_, to_pose->y_) || !isCellFree(from_pose->x_, from_pose->y_)) {
             return false;
         }
 
         int n_points = int(floor(dist / path_resolution_));
 
-        unsigned int tmp_x = x1, tmp_y = y1;
+        double tmp_x = from_pose->x_, tmp_y = from_pose->y_;
         for (int i = 0; i < n_points; ++i) {
-            tmp_x = tmp_x + path_resolution_ * cos(theta);
-            tmp_y = tmp_y + path_resolution_ * sin(theta);
-            if (!isCellFree(tmp_x, tmp_y)) {
+            tmp_x = tmp_x + double(path_resolution_) * cos(theta);
+            tmp_y = tmp_y + double(path_resolution_) * sin(theta);
+            if (!isCellFree(int(round(tmp_x)), int(round(tmp_y)))) {
                 return false;
             }
         }
         return true;
     }
+
+    
 
 };

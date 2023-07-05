@@ -87,10 +87,11 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         bool checkCollision(const NodePtr& node);
         std::pair<double, double> clacDistanceAndAngle(const NodePtr& from_node, const NodePtr& to_node);
 
-        void waypointOptimize(std::vector<geometry_msgs::PoseStamped>& plan);
-        bool isPathFree(const geometry_msgs::PoseStamped& from_pose, const geometry_msgs::PoseStamped& to_pose);
-
         void publishPlanPoints(const std::vector<geometry_msgs::PoseStamped>& path);
+
+        void publishOptimizePath();
+        void waypointOptimize();
+        bool isPathFree(const NodePtr& from_pose, const NodePtr& to_pose);
 
     protected:
         costmap_2d::Costmap2D* costmap_;
@@ -99,6 +100,9 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         bool initialized_;
 
         ros::Publisher path_nodes_pub_;
+
+        std::vector<NodePtr> node_path_;
+        ros::Publisher optimize_path_pub_;
 
     private:
         int nx_, ny_, ns_;
