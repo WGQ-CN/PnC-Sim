@@ -36,6 +36,7 @@ namespace rrt_global_planner {
             plan_pub_ = private_nh.advertise<nav_msgs::Path>("plan", 1);
             path_nodes_pub_ = private_nh.advertise<visualization_msgs::MarkerArray>("path_nodes", 1);
             optimize_path_pub_ = private_nh.advertise<nav_msgs::Path>("optimize_path", 1);
+            smooth_path_pub_ = private_nh.advertise<nav_msgs::Path>("smooth_path", 1);
 
             rand_area_ = std::pair<int, int>{0, min(nx_, ny_)};
             expand_dis_ = 30;
@@ -45,7 +46,7 @@ namespace rrt_global_planner {
             play_area_ = std::vector<int>{0, nx_, 0, ny_};
 
             srand((int)time(0));
-
+            
             initialized_ = true;
         } else
             ROS_WARN("This planner has already been initialized, you can't call it twice, doing nothing");
@@ -59,7 +60,7 @@ namespace rrt_global_planner {
             return false;
         }
 
-        node_path_.clear();
+        optimize_path_.clear();
         plan.clear();
 
         ros::NodeHandle nh;
@@ -139,6 +140,8 @@ namespace rrt_global_planner {
 
         waypointOptimize();
         publishOptimizePath();
+
+        pathSmooth();
         return true;
     }
 
@@ -192,15 +195,15 @@ namespace rrt_global_planner {
 
     void RRTGlobalPlanner::publishOptimizePath() {
         nav_msgs::Path gui_path;
-        gui_path.poses.resize(node_path_.size());
+        gui_path.poses.resize(optimize_path_.size());
 
         gui_path.header.frame_id = frame_id_;
         gui_path.header.stamp = ros::Time::now();
 
         // Extract the plan in world co-ordinates, we assume the path is all in the same frame
-        for (unsigned int i = 0; i < node_path_.size(); i++) {
+        for (unsigned int i = 0; i < optimize_path_.size(); i++) {
             gui_path.poses[i].header.frame_id = frame_id_;
-            mapToWorld(node_path_[i]->x_, node_path_[i]->y_, gui_path.poses[i].pose.position.x, gui_path.poses[i].pose.position.y);
+            mapToWorld(optimize_path_[i]->x_, optimize_path_[i]->y_, gui_path.poses[i].pose.position.x, gui_path.poses[i].pose.position.y);
             
             gui_path.poses[i].pose.position.z = 0.0;
             gui_path.poses[i].pose.orientation.w = 1.0;
@@ -297,7 +300,7 @@ namespace rrt_global_planner {
             // path_node.pose.orientation.z = 0.0;
             // mapToWorld(node->x_, node->y_, path_node.pose.position.x, path_node.pose.position.y);
             // path_nodes.markers.push_back(path_node);
-            node_path_.push_back(node);
+            optimize_path_.push_back(node);
 
             tmp_pose.header.frame_id = frame_id_;
             mapToWorld(node->x_, node->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
@@ -322,10 +325,10 @@ namespace rrt_global_planner {
         tmp_pose.pose.orientation.y = 0.0;
         tmp_pose.pose.orientation.z = 0.0;
 
-        node_path_.push_back(node);
+        optimize_path_.push_back(node);
         plan.push_back(tmp_pose);
 
-        std::reverse(node_path_.begin(), node_path_.end());
+        std::reverse(optimize_path_.begin(), optimize_path_.end());
         std::reverse(plan.begin(), plan.end());
 
         // path_nodes_pub_.publish(path_nodes);
@@ -426,7 +429,7 @@ namespace rrt_global_planner {
     }
 
     void RRTGlobalPlanner::waypointOptimize() {
-        size_t p_count = node_path_.size();
+        size_t p_count = optimize_path_.size();
 
         int i = p_count - 1;
         while (i > 1)
@@ -434,13 +437,13 @@ namespace rrt_global_planner {
             int j = 0;
             while (j <= i - 2)
             {
-                if (isPathFree(node_path_[j], node_path_[i])) {
-                    auto it = node_path_.begin();
+                if (isPathFree(optimize_path_[j], optimize_path_[i])) {
+                    auto it = optimize_path_.begin();
                     for (int k = 0; k < j + 1; ++k) {
                         ++it;
                     }
                     for (int k = j + 1; k <= i - 1; ++k) {
-                        it = node_path_.erase(it);
+                        it = optimize_path_.erase(it);
                     }
                     i = j;
                     break;
@@ -449,40 +452,71 @@ namespace rrt_global_planner {
             }
             if (i - 1 == j) i = i - 1;
         }
+    }
 
-        unsigned int path_cnt = node_path_.size();
-        NodePtr p_start = node_path_[0];
-        NodePtr p_goal = node_path_[path_cnt - 1];
-        double p_tmp_x = p_start->x_;
-        double p_tmp_y = p_start->y_;
-        std::vector<NodePtr> path_res = {p_start};
+    bool RRTGlobalPlanner::isPathFree(const NodePtr& from_pose, const NodePtr& to_pose) {
+        double dx = to_pose->x_ - from_pose->x_;
+        double dy = to_pose->y_ - from_pose->y_;
+        double dist = hypot(dx, dy);
+        double theta = atan2(dy, dx);
+        
+        if (!isCellFree(to_pose->x_, to_pose->y_) || !isCellFree(from_pose->x_, from_pose->y_)) {
+            return false;
+        }
 
-        // std::vector<NodePtr> P;
-        // std::pair<double, double> p2p1;
-        // std::pair<double, double> p2p3;
-        // double x1, y1, x2, y2;
-        // NodePtr A, B, C;
-        // std::pair<double, double> BA;
-        // std::pair<double, double> BC;
-        // double L_BA, L_BC, L;
-        // double theta;
-        // double L_BO, R;
-        // double c1, c2;
-        // double xo, yo;
-        // double theta_BA, theta_BC;
-        // double theta1, theta2;
+        int n_points = int(floor(dist / path_resolution_));
+
+        double tmp_x = from_pose->x_, tmp_y = from_pose->y_;
+        for (int i = 0; i < n_points; ++i) {
+            tmp_x = tmp_x + double(path_resolution_) * cos(theta);
+            tmp_y = tmp_y + double(path_resolution_) * sin(theta);
+            if (!isCellFree(int(round(tmp_x)), int(round(tmp_y)))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void RRTGlobalPlanner::pathSmooth() {
+
+        std::vector<geometry_msgs::PoseStamped> smooth_path;
+        unsigned int optimize_path_cnt = optimize_path_.size();
+
+        for (int i = 0; i < optimize_path_cnt; ++i) {
+            geometry_msgs::PoseStamped tmp_pose;
+        
+            tmp_pose.header.frame_id = frame_id_;
+            mapToWorld(optimize_path_[i]->x_, optimize_path_[i]->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+            
+            tmp_pose.pose.position.z = 0.0;
+            tmp_pose.pose.orientation.w = 1.0;
+            tmp_pose.pose.orientation.x = 0.0;
+            tmp_pose.pose.orientation.y = 0.0;
+            tmp_pose.pose.orientation.z = 0.0;
+
+            smooth_path.push_back(tmp_pose);
+        }
+
+
+        unsigned int smooth_path_cnt = smooth_path.size();
+        geometry_msgs::PoseStamped p_start = smooth_path[0];
+        geometry_msgs::PoseStamped p_goal = smooth_path[smooth_path_cnt - 1];
+        double p_tmp_x = p_start.pose.position.x;
+        double p_tmp_y = p_start.pose.position.y;
+        std::vector<geometry_msgs::PoseStamped> smooth_path_res = {p_start};
+
         unsigned int n_points = 10;
 
-        for (int i = 0; i < path_cnt - 2; ++i) {
-            std::vector<NodePtr> P = {node_path_[i], node_path_[i + 1], node_path_[i + 2]};
-            std::pair<double, double> p2p1 = {P[0]->x_ - P[1]->x_, P[0]->y_ - P[1]->y_};
-            std::pair<double, double> p2p3 = {P[2]->x_ - P[1]->x_, P[2]->y_ - P[1]->y_};
+        for (int i = 0; i < smooth_path_cnt - 2; ++i) {
+            std::vector<geometry_msgs::PoseStamped> P = {smooth_path[i], smooth_path[i + 1], smooth_path[i + 2]};
+            std::pair<double, double> p2p1 = {P[0].pose.position.x - P[1].pose.position.x, P[0].pose.position.y - P[1].pose.position.y};
+            std::pair<double, double> p2p3 = {P[2].pose.position.x - P[1].pose.position.x, P[2].pose.position.y - P[1].pose.position.y};
             double x1 = p2p1.first;
             double y1 = p2p1.second;
             double x2 = p2p3.first;
             double y2 = p2p3.second;
 
-            NodePtr A, B, C;
+            geometry_msgs::PoseStamped A, B, C;
             B = P[1];
             if (x1 > 0 && y1 > 0) {
                 if (x2 > 0 && y2 > 0) {
@@ -614,11 +648,11 @@ namespace rrt_global_planner {
                 }
             }
 
-            std::pair<double, double> BA = {A->x_ - B->x_, A->y_ - B->y_};
-            std::pair<double, double> BC = {C->x_ - B->x_, C->y_ - B->y_};
+            std::pair<double, double> BA = {A.pose.position.x - B.pose.position.x, A.pose.position.y - B.pose.position.y};
+            std::pair<double, double> BC = {C.pose.position.x - B.pose.position.x, C.pose.position.y - B.pose.position.y};
 
-            double L_BA = sqrt(double((A->x_ - B->x_) * (A->x_ - B->x_) + (A->y_ - B->y_) * (A->y_ - B->y_)));
-            double L_BC = sqrt(double((C->x_ - B->x_) * (C->x_ - B->x_) + (C->y_ - B->y_) * (C->y_ - B->y_)));
+            double L_BA = sqrt(double((A.pose.position.x - B.pose.position.x) * (A.pose.position.x - B.pose.position.x) + (A.pose.position.y - B.pose.position.y) * (A.pose.position.y - B.pose.position.y)));
+            double L_BC = sqrt(double((C.pose.position.x - B.pose.position.x) * (C.pose.position.x - B.pose.position.x) + (C.pose.position.y - B.pose.position.y) * (C.pose.position.y - B.pose.position.y)));
             double L = min(L_BA, L_BC) / 3;
 
             double theta = acos(double(BA.first * BC.first + BA.second * BC.second) / (L_BA * L_BC));
@@ -626,21 +660,24 @@ namespace rrt_global_planner {
             double L_BO = L / cos(0.5 * theta);
             double R = L * tan(0.5 * theta);
 
-            // c1 = L_BA * L_BO * cos(0.5 * theta) + BA.first * B->x_ + BA.second * B->y_;
-            // c2 = L_BC * L_BO * cos(0.5 * theta) + BC.first * B->x_ + BC.second * B->y_;
+            geometry_msgs::PoseStamped D, E, F;
+            E.pose.position.x = L / L_BA * BA.first + B.pose.position.x;
+            E.pose.position.y = L / L_BA * BA.second + B.pose.position.y;
+            F.pose.position.x = L / L_BC * BC.first + B.pose.position.x;
+            F.pose.position.y = L / L_BC * BC.second + B.pose.position.y;
+            D.pose.position.x = (E.pose.position.x + F.pose.position.x) / 2;
+            D.pose.position.y = (E.pose.position.y + F.pose.position.y) / 2;
 
-            NodePtr E(new Node(toIndex(L / L_BA * BA.first + B->x_, L / L_BA * BA.second + B->y_), L / L_BA * BA.first + B->x_, L / L_BA * BA.second + B->y_));
-            NodePtr F(new Node(toIndex(L / L_BC * BC.first + B->x_, L / L_BC * BC.second + B->y_), L / L_BC * BC.first + B->x_, L / L_BC * BC.second + B->y_));
-            NodePtr D(new Node(toIndex((E->x_ + F->x_) / 2, (E->y_ + F->y_) / 2), (E->x_ + F->x_) / 2, (E->y_ + F->y_) / 2));
+            double L_BD = sqrt(double((D.pose.position.x - B.pose.position.x) * (D.pose.position.x - B.pose.position.x) + (D.pose.position.y - B.pose.position.y) * (D.pose.position.y - B.pose.position.y)));
 
-            double L_BD = sqrt(double((D->x_ - B->x_) * (D->x_ - B->x_) + (D->y_ - B->y_) * (D->y_ - B->y_)));
+            std::pair<double, double> BD = {D.pose.position.x - B.pose.position.x, D.pose.position.y - B.pose.position.y};
 
-            std::pair<double, double> BD = {D->x_ - B->x_, D->y_ - B->y_};
+            geometry_msgs::PoseStamped O;
+            O.pose.position.x = L_BO / L_BD * BD.first + B.pose.position.x;
+            O.pose.position.y = L_BO / L_BD * BD.second + B.pose.position.y;
 
-            NodePtr O(new Node(toIndex(L_BO / L_BD * BD.first + B->x_, L_BO / L_BD * BD.second + B->y_), L_BO / L_BD * BD.first + B->x_, L_BO / L_BD * BD.second + B->y_));
-
-            double xo = O->x_;
-            double yo = O->y_;
+            double xo = O.pose.position.x;
+            double yo = O.pose.position.y;
 
             // if (BA.second == 0) {
             //     xo = c1 / BA.first;
@@ -691,6 +728,8 @@ namespace rrt_global_planner {
                 theta_BC = atan(double(double(BC.second) / double(BC.first))) + M_PI;
             }
 
+            ROS_INFO("%lf, %lf", theta_BA, theta_BC);
+
             double theta1 = std::fmod((theta_BA + 0.5 * M_PI) + 2 * M_PI, 2 * M_PI);
             double theta2 = std::fmod((theta_BC - 0.5 * M_PI) + 2 * M_PI, 2 * M_PI);
 
@@ -710,52 +749,73 @@ namespace rrt_global_planner {
             std::vector<double> Y(n_points + 1);
 
             for (int i = 0; i <= n_points; ++i) {
-                X[i] = round(rho[i] * cos(theta_list[i]) + xo);
-                Y[i] = round(rho[i] * sin(theta_list[i]) + yo);
+                X[i] = rho[i] * cos(theta_list[i]) + xo;
+                Y[i] = rho[i] * sin(theta_list[i]) + yo;
+                if (X[i] < play_area_[0] || X[i] > play_area_[1] || Y[i] < play_area_[2] || Y[i] > play_area_[3]) {
+                    ROS_INFO("theta:%lf, x:%lf, y:%lf", theta_list[i], X[i], Y[i]);
+                }
             }
 
             if (manhattanDistance(X[0], Y[0], p_tmp_x, p_tmp_y) < manhattanDistance(X[n_points], Y[n_points], p_tmp_x, p_tmp_y)) {
                 for (int i = 0; i <= n_points; ++i) {
-                    NodePtr p(new Node(toIndex(X[i], Y[i]), X[i], Y[i]));
-                    path_res.push_back(p);
+                    geometry_msgs::PoseStamped tmp_pose;
+        
+                    tmp_pose.header.frame_id = frame_id_;
+                    tmp_pose.pose.position.x = X[i];
+                    tmp_pose.pose.position.y = Y[i];
+                    
+                    tmp_pose.pose.position.z = 0.0;
+                    tmp_pose.pose.orientation.w = 1.0;
+                    tmp_pose.pose.orientation.x = 0.0;
+                    tmp_pose.pose.orientation.y = 0.0;
+                    tmp_pose.pose.orientation.z = 0.0;
+
+                    smooth_path_res.push_back(tmp_pose);
                 }
                 p_tmp_x = X[n_points];
                 p_tmp_y = Y[n_points];
             } else {
                 for (int i = n_points; i >= 0; --i) {
-                    NodePtr p(new Node(toIndex(X[i], Y[i]), X[i], Y[i]));
-                    path_res.push_back(p);
+                    geometry_msgs::PoseStamped tmp_pose;
+        
+                    tmp_pose.header.frame_id = frame_id_;
+                    tmp_pose.pose.position.x = X[i];
+                    tmp_pose.pose.position.y = Y[i];
+                    
+                    tmp_pose.pose.position.z = 0.0;
+                    tmp_pose.pose.orientation.w = 1.0;
+                    tmp_pose.pose.orientation.x = 0.0;
+                    tmp_pose.pose.orientation.y = 0.0;
+                    tmp_pose.pose.orientation.z = 0.0;
+
+                    smooth_path_res.push_back(tmp_pose);
                 }
                 p_tmp_x = X[0];
                 p_tmp_y = Y[0];
             }
         }
-        path_res.push_back(p_goal);
+        smooth_path_res.push_back(p_goal);
 
-        node_path_ = path_res;
-    }
+        nav_msgs::Path gui_path;
+        gui_path.poses.resize(smooth_path_res.size());
 
-    bool RRTGlobalPlanner::isPathFree(const NodePtr& from_pose, const NodePtr& to_pose) {
-        double dx = to_pose->x_ - from_pose->x_;
-        double dy = to_pose->y_ - from_pose->y_;
-        double dist = hypot(dx, dy);
-        double theta = atan2(dy, dx);
-        
-        if (!isCellFree(to_pose->x_, to_pose->y_) || !isCellFree(from_pose->x_, from_pose->y_)) {
-            return false;
+        gui_path.header.frame_id = frame_id_;
+        gui_path.header.stamp = ros::Time::now();
+
+        // Extract the plan in world co-ordinates, we assume the path is all in the same frame
+        for (unsigned int i = 0; i < smooth_path_res.size(); i++) {
+            gui_path.poses[i].header.frame_id = frame_id_;
+            gui_path.poses[i].pose.position.x = smooth_path_res[i].pose.position.x;
+            gui_path.poses[i].pose.position.y = smooth_path_res[i].pose.position.y;
+            
+            gui_path.poses[i].pose.position.z = 0.0;
+            gui_path.poses[i].pose.orientation.w = 1.0;
+            gui_path.poses[i].pose.orientation.x = 0.0;
+            gui_path.poses[i].pose.orientation.y = 0.0;
+            gui_path.poses[i].pose.orientation.z = 0.0;
         }
 
-        int n_points = int(floor(dist / path_resolution_));
-
-        double tmp_x = from_pose->x_, tmp_y = from_pose->y_;
-        for (int i = 0; i < n_points; ++i) {
-            tmp_x = tmp_x + double(path_resolution_) * cos(theta);
-            tmp_y = tmp_y + double(path_resolution_) * sin(theta);
-            if (!isCellFree(int(round(tmp_x)), int(round(tmp_y)))) {
-                return false;
-            }
-        }
-        return true;
+        smooth_path_pub_.publish(gui_path);
     }
 
 };

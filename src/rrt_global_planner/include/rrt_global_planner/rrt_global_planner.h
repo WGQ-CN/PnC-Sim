@@ -93,6 +93,8 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         void waypointOptimize();
         bool isPathFree(const NodePtr& from_pose, const NodePtr& to_pose);
 
+        void pathSmooth();
+
     protected:
         costmap_2d::Costmap2D* costmap_;
         std::string frame_id_;
@@ -101,8 +103,9 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
 
         ros::Publisher path_nodes_pub_;
 
-        std::vector<NodePtr> node_path_;
+        std::vector<NodePtr> optimize_path_;
         ros::Publisher optimize_path_pub_;
+        ros::Publisher smooth_path_pub_;
 
     private:
         int nx_, ny_, ns_;
