@@ -257,7 +257,11 @@ namespace rrt_global_planner {
         int n_expand = extend_length / path_resolution_;
 
         for (int i = 0; i < n_expand; ++i) {
-            new_node->x_ = new_node->x_ + path_resolution_ * cos(dist_and_theta.second);
+            // new_node->x_ = round(double(new_node->x_) + double(path_resolution_) * cos(dist_and_theta.second));
+            // new_node->y_ = round(double(new_node->y_) + double(path_resolution_) * sin(dist_and_theta.second));
+            // new_node->x_ = new_node->x_ + path_resolution_ * cos(dist_and_theta.second) + 0.5;   // 四舍五入会导致movebase崩溃
+            // new_node->y_ = new_node->y_ + path_resolution_ * sin(dist_and_theta.second) + 0.5;
+            new_node->x_ = new_node->x_ + path_resolution_ * cos(dist_and_theta.second);            // int类型计算会存在bug，距离不准
             new_node->y_ = new_node->y_ + path_resolution_ * sin(dist_and_theta.second);
             new_node->path_x_.push_back(new_node->x_);
             new_node->path_y_.push_back(new_node->y_);
@@ -473,6 +477,9 @@ namespace rrt_global_planner {
             if (!isCellFree(int(round(tmp_x)), int(round(tmp_y)))) {
                 return false;
             }
+            // if (!isCellFree(int(tmp_x + 0.5), int(tmp_y + 0.5))) {
+            //     return false;
+            // }
         }
         return true;
     }
@@ -728,7 +735,7 @@ namespace rrt_global_planner {
                 theta_BC = atan(double(double(BC.second) / double(BC.first))) + M_PI;
             }
 
-            ROS_INFO("%lf, %lf", theta_BA, theta_BC);
+            // ROS_INFO("%lf, %lf", theta_BA, theta_BC);
 
             double theta1 = std::fmod((theta_BA + 0.5 * M_PI) + 2 * M_PI, 2 * M_PI);
             double theta2 = std::fmod((theta_BC - 0.5 * M_PI) + 2 * M_PI, 2 * M_PI);
@@ -751,9 +758,9 @@ namespace rrt_global_planner {
             for (int i = 0; i <= n_points; ++i) {
                 X[i] = rho[i] * cos(theta_list[i]) + xo;
                 Y[i] = rho[i] * sin(theta_list[i]) + yo;
-                if (X[i] < play_area_[0] || X[i] > play_area_[1] || Y[i] < play_area_[2] || Y[i] > play_area_[3]) {
-                    ROS_INFO("theta:%lf, x:%lf, y:%lf", theta_list[i], X[i], Y[i]);
-                }
+                // if (X[i] < play_area_[0] || X[i] > play_area_[1] || Y[i] < play_area_[2] || Y[i] > play_area_[3]) {
+                //     ROS_INFO("theta:%lf, x:%lf, y:%lf", theta_list[i], X[i], Y[i]);
+                // }
             }
 
             if (manhattanDistance(X[0], Y[0], p_tmp_x, p_tmp_y) < manhattanDistance(X[n_points], Y[n_points], p_tmp_x, p_tmp_y)) {

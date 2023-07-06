@@ -15,7 +15,7 @@
     <rosparam file="$(find rrt_global_planner)/config/teb_local_planner_params.yaml" command="load" />
 
     <param name="base_global_planner" value="rrt_global_planner/RRTGlobalPlanner"/>
-    <param name="planner_frequency" value="0.0" />
+    <param name="planner_frequency" value="1.0" />
     <param name="planner_patience" value="20.0" />
     <param name="controller_frequency" value="5.0" />
     <param name="controller_patience" value="20.0" />

@@ -489,8 +489,8 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 25; 255; 0
-      Enabled: false
+      Color: 252; 233; 79
+      Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
@@ -509,7 +509,7 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic: /move_base/RRTGlobalPlanner/plan
       Unreliable: false
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: false
       Marker Topic: /move_base/RRTGlobalPlanner/path_nodes
@@ -552,7 +552,7 @@ Visualization Manager:
       Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.029999999329447746
-      Name: Path
+      Name: SmoothPath
       Offset:
         X: 0
         Y: 0
@@ -603,10 +603,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 35.3104362487793
+      Scale: 32.75141906738281
       Target Frame: <Fixed Frame>
-      X: 12.730952262878418
-      Y: 1.449397087097168
+      X: 1.9030183553695679
+      Y: 3.950166702270508
     Saved: ~
 Window Geometry:
   Displays:
