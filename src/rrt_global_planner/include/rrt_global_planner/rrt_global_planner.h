@@ -22,6 +22,8 @@
 
 #include <visualization_msgs/MarkerArray.h>
 
+#include <b_spline_smoother.h>
+
 using std::string;
 
 namespace rrt_global_planner {
@@ -92,6 +94,7 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         void publishOptimizePath();
         void waypointOptimize();
         bool isPathFree(const NodePtr& from_pose, const NodePtr& to_pose);
+        void nodePath2PosePath(const std::vector<NodePtr>& node_path, std::vector<geometry_msgs::PoseStamped>& pose_path);
 
         void pathSmooth();
 
@@ -106,6 +109,8 @@ class RRTGlobalPlanner : public nav_core::BaseGlobalPlanner {
         std::vector<NodePtr> optimize_path_;
         ros::Publisher optimize_path_pub_;
         ros::Publisher smooth_path_pub_;
+
+        BSplineSmoother b_spline_smoother;
 
     private:
         int nx_, ny_, ns_;

@@ -125,7 +125,10 @@ include_directories(
 #   src/${PROJECT_NAME}/rrt_global_planner.cpp
 # )
 
-add_library(rrt_global_planner_lib src/rrt_global_planner.cpp)
+add_library(rrt_global_planner_lib
+  src/rrt_global_planner.cpp
+  src/b_spline_smoother.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -150,7 +153,7 @@ add_library(rrt_global_planner_lib src/rrt_global_planner.cpp)
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(${PROJECT_NAME}_node
 #   ${catkin_LIBRARIES}
-# )
+# )W
 
 #############
 ## Install ##

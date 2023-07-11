@@ -46,6 +46,8 @@ namespace rrt_global_planner {
             play_area_ = std::vector<int>{0, nx_, 0, ny_};
 
             srand((int)time(0));
+
+            b_spline_smoother = BSplineSmoother(frame_id);
             
             initialized_ = true;
         } else
@@ -135,13 +137,18 @@ namespace rrt_global_planner {
             }
         }
 
-        publishPlan(plan);
-        publishPlanPoints(plan);
+        // publishPlan(plan);
+        // publishPlanPoints(plan);
 
         waypointOptimize();
-        publishOptimizePath();
+        
+        nodePath2PosePath(optimize_path_, plan);
+        b_spline_smoother.makeSmooth(plan);
+        publishPlan(plan);
 
-        pathSmooth();
+        // publishOptimizePath();
+
+        // pathSmooth();
         return true;
     }
 
@@ -455,6 +462,23 @@ namespace rrt_global_planner {
                 j = j + 1;
             }
             if (i - 1 == j) i = i - 1;
+        }
+    }
+
+    void RRTGlobalPlanner::nodePath2PosePath(const std::vector<NodePtr>& node_path, std::vector<geometry_msgs::PoseStamped>& pose_path) {
+        pose_path.clear();
+        for (int i = 0; i < node_path.size(); ++i) {
+            geometry_msgs::PoseStamped tmp_pose;
+            tmp_pose.header.frame_id = frame_id_;
+            mapToWorld(node_path[i]->x_, node_path[i]->y_, tmp_pose.pose.position.x, tmp_pose.pose.position.y);
+            
+            tmp_pose.pose.position.z = 0.0;
+            tmp_pose.pose.orientation.w = 1.0;
+            tmp_pose.pose.orientation.x = 0.0;
+            tmp_pose.pose.orientation.y = 0.0;
+            tmp_pose.pose.orientation.z = 0.0;
+
+            pose_path.push_back(tmp_pose);
         }
     }
 
