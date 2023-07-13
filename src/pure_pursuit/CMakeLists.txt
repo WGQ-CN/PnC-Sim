@@ -156,6 +156,9 @@ include_directories(
 #   ${catkin_LIBRARIES}
 # )
 
+add_executable(pure_pursuit_node src/pure_pursuit.cpp)
+target_link_libraries(pure_pursuit_node ${catkin_LIBRARIES})
+
 #############
 ## Install ##
 #############
