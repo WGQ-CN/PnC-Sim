@@ -16,22 +16,33 @@ void PurePursuit::initialize() {
     slow_distance_ = 0.3;
     max_vel_x_ = 1.2;
     min_vel_x_ = 0.2;
+
+    is_planned_ = false;
 }
 
 void PurePursuit::globalPlanCallback(const nav_msgs::PathConstPtr& global_plan_ptr) {
-    global_plan_ = *global_plan_ptr;
+    if (!global_plan_ptr->poses.empty()) {
+        global_plan_ = *global_plan_ptr;
+        is_planned_ = true;
+    } else {
+        is_planned_ = false;
+    }
 }
 
 void PurePursuit::calculateTwistCommand() {
-    double lad_acc = 0.0;
-    unsigned int target_index = global_plan_.poses.size() - 1;
     geometry_msgs::Twist twist_cmd;
 
-    if (target_index < 1) {
+    if (!is_planned_) {
         twist_cmd.linear.x = 0.0;
         twist_cmd.angular.z = 0.0;
         cmd_vel_pub_.publish(twist_cmd);
         return ;
+    }
+
+    double lad_acc = 0.0;
+    unsigned int target_index = global_plan_.poses.size() - 1;
+
+    if (target_index < 1) {
     }
 
     for (int i = 0; i < global_plan_.poses.size() - 1; ++i) {
@@ -91,7 +102,8 @@ void PurePursuit::runPurePursuit() {
             pose_x_ = transform.getOrigin().x();
             pose_y_ = transform.getOrigin().y();
             pose_yaw_ = tf::getYaw(transform.getRotation());
-            ROS_INFO("x:%lf, y:%lf, yaw:%lf", pose_x_, pose_y_, pose_yaw_);
+            // ROS_INFO("x:%lf, y:%lf, yaw:%lf", pose_x_, pose_y_, pose_yaw_);
+            ros::Duration(0.01).sleep();
             calculateTwistCommand();
         }
         ros::spinOnce();

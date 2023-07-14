@@ -37,6 +37,8 @@ class PurePursuit {
         
         double pose_x_, pose_y_;
         double pose_yaw_;
+
+        bool is_planned_;
 };
 
 #endif
