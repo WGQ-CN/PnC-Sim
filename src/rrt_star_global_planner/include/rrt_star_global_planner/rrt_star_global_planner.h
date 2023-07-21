@@ -125,6 +125,8 @@ class RRTStarGlobalPlanner : public nav_core::BaseGlobalPlanner {
         double max_iter_;
         std::vector<int> play_area_;
 
+        int goal_node_i_;
+
     };
 };
 

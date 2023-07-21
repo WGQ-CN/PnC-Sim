@@ -38,8 +38,8 @@ namespace rrt_star_global_planner {
 
             rand_area_ = std::pair<int, int>{0, min(nx_, ny_)};
             expand_dis_ = 30;
-            path_resolution_ = 6; // Must be greater than or equal to 2
-            goal_sample_rate_ = 30;
+            path_resolution_ = 5; // Must be greater than or equal to 2
+            goal_sample_rate_ = 50;
             max_iter_ = 50000;
             play_area_ = std::vector<int>{0, nx_, 0, ny_};
 
@@ -110,6 +110,9 @@ namespace rrt_star_global_planner {
         NodePtr goal_node(new Node(goal_i, goal_x, goal_y));
 
         std::vector<NodePtr> node_list = {start_node};
+
+        bool isfind = false;
+        goal_node_i_ = -1;
         
         for (int i = 0; i < max_iter_; ++i) {
             NodePtr rnd_node = getRandomNode(goal_i);
@@ -125,16 +128,22 @@ namespace rrt_star_global_planner {
                 rewire(new_node, node_list);
             }
 
-            if (calcDist2Goal(node_list.back()->x_, node_list.back()->y_, goal_i) <= expand_dis_) {
+            if (!isfind && calcDist2Goal(node_list.back()->x_, node_list.back()->y_, goal_i) <= expand_dis_) {
                 NodePtr final_node = steer(node_list.back(), goal_node);
                 // if (checkCollision(final_node))
                 if (isPathFree(node_list.back(), final_node)) {
                     chooseParent(node_list.back(), final_node, node_list);
                     node_list.push_back(final_node);
-                    generateFinalCourse(plan, node_list);
-                    break;
+                    // generateFinalCourse(plan, node_list);
+                    // break;
+                    goal_node_i_ = node_list.size() - 1;
+                    isfind = true;
                 }
             }
+        }
+
+        if (isfind) {
+            generateFinalCourse(plan, node_list);
         }
 
         publishPlan(plan);
@@ -228,7 +237,8 @@ namespace rrt_star_global_planner {
     }
 
     void RRTStarGlobalPlanner::generateFinalCourse(std::vector<geometry_msgs::PoseStamped>& plan, const std::vector<NodePtr>& node_list) {
-        NodePtr node = node_list.back();
+        // NodePtr node = node_list.back();
+        NodePtr node = node_list[goal_node_i_];
         geometry_msgs::PoseStamped tmp_pose;
         visualization_msgs::MarkerArray path_nodes;
         int cnt = 0;
@@ -319,6 +329,10 @@ namespace rrt_star_global_planner {
         double min_dist = 10000;
         int p_count = node_list.size();
         for (int i = 0; i < p_count; ++i) {
+            if (i == goal_node_i_) {
+                continue;
+            }
+
             double dx = node_list[i]->x_ - rnd_node->x_;
             double dy = node_list[i]->y_ - rnd_node->y_;
             double dist = hypot(dx, dy);
@@ -378,6 +392,10 @@ namespace rrt_star_global_planner {
     void RRTStarGlobalPlanner::chooseParent(NodePtr& nearest_node, NodePtr& new_node, const std::vector<NodePtr>& node_list) {
         int p_count = node_list.size();
         for (int i = 0; i < p_count; ++i) {
+            if (i == goal_node_i_) {
+                continue;
+            }
+
             if (manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < expand_dis_ &&
             node_list[i]->cost_ + manhattanDistance(node_list[i]->x_, node_list[i]->y_, new_node->x_, new_node->y_) < nearest_node->cost_ + manhattanDistance(nearest_node->x_, nearest_node->y_, new_node->x_, new_node->y_) &&
             isPathFree(node_list[i], new_node)) {
@@ -402,22 +420,46 @@ namespace rrt_star_global_planner {
     }
 
     bool RRTStarGlobalPlanner::isPathFree(const NodePtr& from_node, const NodePtr& to_node) {
-        std::pair<double, double> dist_and_theta = clacDistanceAndAngle(from_node, to_node);
-        if (dist_and_theta.first < path_resolution_) {
-            if (isCellFree(from_node->index_) && isCellFree(to_node->index_)) {
-                return true;
-            } else return false;
+        // std::pair<double, double> dist_and_theta = clacDistanceAndAngle(from_node, to_node);
+        // if (dist_and_theta.first < path_resolution_) {
+        //     if (isCellFree(from_node->index_) && isCellFree(to_node->index_)) {
+        //         return true;
+        //     } else return false;
+        // }
+
+        // int n_points = int(floor(dist_and_theta.first / path_resolution_));
+
+        // int tmp_x = from_node->x_, tmp_y = from_node->y_;
+        // for (int i = 0; i < n_points; ++i) {
+        //     tmp_x = tmp_x + path_resolution_ * cos(dist_and_theta.second);
+        //     tmp_y = tmp_y + path_resolution_ * sin(dist_and_theta.second);
+        //     if (!isCellFree(tmp_x, tmp_y)) {
+        //         return false;
+        //     }
+        // }
+        // return true;
+
+        double dx = to_node->x_ - from_node->x_;
+        double dy = to_node->y_ - from_node->y_;
+        double dist = hypot(dx, dy);
+        double theta = atan2(dy, dx);
+        
+        if (!isCellFree(to_node->x_, to_node->y_) || !isCellFree(from_node->x_, from_node->y_)) {
+            return false;
         }
 
-        int n_points = int(floor(dist_and_theta.first / path_resolution_));
+        int n_points = int(floor(dist / path_resolution_));
 
-        int tmp_x = from_node->x_, tmp_y = from_node->y_;
+        double tmp_x = from_node->x_, tmp_y = from_node->y_;
         for (int i = 0; i < n_points; ++i) {
-            tmp_x = tmp_x + path_resolution_ * cos(dist_and_theta.second);
-            tmp_y = tmp_y + path_resolution_ * sin(dist_and_theta.second);
-            if (!isCellFree(tmp_x, tmp_y)) {
+            tmp_x = tmp_x + double(path_resolution_) * cos(theta);
+            tmp_y = tmp_y + double(path_resolution_) * sin(theta);
+            if (!isCellFree(int(round(tmp_x)), int(round(tmp_y)))) {
                 return false;
             }
+            // if (!isCellFree(int(tmp_x + 0.5), int(tmp_y + 0.5))) {
+            //     return false;
+            // }
         }
         return true;
     }
