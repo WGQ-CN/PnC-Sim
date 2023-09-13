@@ -18,7 +18,6 @@
 		<arg name="paused" value="$(arg paused)"/>
 		<arg name="use_sim_time" value="$(arg use_sim_time)"/>
 		<arg name="headless" value="$(arg headless)"/>
-		<!--<arg name="world_name" value="$(find scout_gazebo_sim)/worlds/test1.world"/>-->
 
 		<arg name="world_name" value="$(find racecar_description)/worlds/racetrack.world"/>
 		<!-- .world文件的地址-->
